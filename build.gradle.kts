@@ -25,6 +25,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.danilopianini:khttp:1.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.1")
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
 //    implementation("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
     developmentOnly("org.springframework.boot:spring-boot-devtools")

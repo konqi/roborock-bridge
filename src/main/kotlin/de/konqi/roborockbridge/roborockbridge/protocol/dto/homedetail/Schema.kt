@@ -1,5 +1,8 @@
 package de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Schema(
     val id: String,
     val name: String,
@@ -7,5 +10,5 @@ data class Schema(
     val mode: String,
     val type: String,
     val property: String?,
-    val desc: Any?,
+    val desc: String?,
 )

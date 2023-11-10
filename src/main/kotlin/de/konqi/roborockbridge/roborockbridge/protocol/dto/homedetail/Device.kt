@@ -1,27 +1,35 @@
 package de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Device(
     val duid: String,
     val name: String,
-    val attribute: Any?,
+    val attribute: String?,
     val activeTime: Long,
     val localKey: String,
-    val runtimeEnv: Any?,
+    val runtimeEnv: String?,
     val timeZoneId: String,
     val iconUrl: String,
     val productId: String,
-    val lon: Any?,
-    val lat: Any?,
+    // probably decimal
+    val lon: String?,
+    // probably decimal
+    val lat: String?,
     val share: Boolean,
-    val shareTime: Any?,
+    // no idea
+    val shareTime: String?,
     val online: Boolean,
     val fv: String,
     val pv: String,
-    val roomId: Any?,
-    val tuyaUuid: Any?,
+    val roomId: String?,
+    val tuyaUuid: String?,
     val tuyaMigrated: Boolean,
-    val extra: Any?,
-    val setting: Any?,
+    // unknown
+    val extra: String?,
+    // unknown
+    val setting: String?,
     val sn: String,
     val featureSet: String,
     val newFeatureSet: String,

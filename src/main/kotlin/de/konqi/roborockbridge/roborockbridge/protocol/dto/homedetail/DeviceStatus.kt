@@ -1,7 +1,9 @@
 package de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail
 
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DeviceStatus(
     @SerialName("120")
     val n120: Long,

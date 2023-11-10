@@ -2,6 +2,7 @@ package de.konqi.roborockbridge.roborockbridge.protocol
 
 import org.springframework.security.crypto.codec.Hex
 import java.security.MessageDigest
+import java.util.*
 import kotlin.random.Random
 
 class Utils {
@@ -11,11 +12,14 @@ class Utils {
         private val NONCE_CHAR_POOL: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
         @JvmStatic
-        fun calcHexMd5(input: String): String {
+        fun calcMd5(input: String): ByteArray {
             val md5 = MessageDigest.getInstance("MD5")
-            md5.update((input.toByteArray()))
+            return md5.digest(input.toByteArray())
+        }
 
-            return String(Hex.encode(md5.digest()))
+        @JvmStatic
+        fun calcHexMd5(input: String): String {
+            return String(Hex.encode(calcMd5(input)))
         }
 
         @JvmStatic
@@ -25,6 +29,11 @@ class Utils {
                     NONCE_CHAR_POOL[it]
                 }
             }.joinToString("")
+        }
+
+        @JvmStatic
+        fun getTimeSeconds(): Long {
+            return Date().time / 1000
         }
     }
 }

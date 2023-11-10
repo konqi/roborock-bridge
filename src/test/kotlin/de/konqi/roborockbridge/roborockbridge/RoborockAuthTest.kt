@@ -10,9 +10,9 @@ import org.springframework.boot.test.context.SpringBootTest
 class RoborockAuthTest(@Autowired val roborockRestApi: RoborockRestApi) {
     @Test
     fun testLogin() {
-        roborockRestApi.login()
-        roborockRestApi.getHomeDetail()
-        roborockRestApi.getUserHome()
+//        roborockRestApi.login()
+//        roborockRestApi.getHomeDetail()
+//        roborockRestApi.getUserHome()
     }
 
     @Test

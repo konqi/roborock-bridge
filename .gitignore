@@ -7,6 +7,11 @@ build/
 
 # profile specific configuration files
 src/**/resources/application-*.*
+# credential store
+/auth.json
+/home-detail.json
+/robots.json
+/user-home.json
 
 ### STS ###
 .apt_generated

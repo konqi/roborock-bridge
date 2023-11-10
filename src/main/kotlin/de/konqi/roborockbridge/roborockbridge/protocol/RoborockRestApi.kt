@@ -3,6 +3,7 @@ package de.konqi.roborockbridge.roborockbridge.protocol
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail.Device
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail.Product
+import de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail.Room
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail.UserHomeDto
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.login.ApiResponseDto
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.login.AuthenticationResponseData
@@ -33,10 +34,11 @@ import kotlin.RuntimeException
 class RoborockRestApi(@Autowired val credentials: RoborockCredentials) {
     val clientId = generateClientId(credentials.username)
     private var authentication: AuthenticationResponseData? = load(AUTH_FILENAME)
-    private var homeDetail: HomeDetailData? = load(HOME_FILENAME)
+    private var homeDetail: HomeDetailData? = load(HOME_DETAILS_FILENAME)
 
     val isLoggedIn: Boolean get() = authentication !== null && homeDetail !== null
     val canLogIn: Boolean get() = credentials.isValid
+    val rriot: Rriot get() = if(isLoggedIn) authentication!!.rriot else throw RuntimeException("must login first")
 
     fun login() {
         val urlSearchParms = mapOf(
@@ -93,12 +95,20 @@ class RoborockRestApi(@Autowired val credentials: RoborockCredentials) {
         }
 
         this.homeDetail = json.data
-        persist(this.homeDetail, HOME_FILENAME)
+        persist(this.homeDetail, HOME_DETAILS_FILENAME)
     }
 
     fun getUserHome(): Pair<Home, List<Robot>> {
         val homeId = this.homeDetail?.rrHomeId ?: throw RuntimeException("must fetch home detail first")
         val rriot = this.authentication?.rriot ?: throw RuntimeException("must login first")
+
+        var home: Home? = load(HOME_FILENAME)
+        var robots: List<Robot>? = load(ROBOTS_FILENAME)
+
+        // @TODO Temporary solution while developing (in production this can be fetched on each start)
+        if(home !== null && robots !== null) {
+            return (home to robots)
+        }
 
         val baseUrl = rriot.remote.api
         val path = GET_USER_HOME_PATH.replace("{homeId}", homeId.toString())
@@ -120,11 +130,17 @@ class RoborockRestApi(@Autowired val credentials: RoborockCredentials) {
 
         logger.debug("getUserHome response body status: ${json.status}")
 
-        if (json.status === "ok" && json.success) {
-            val home = Home(rooms = json.result.rooms)
-            val robotsInHome = getRobots(devices = json.result.devices, products = json.result.products)
+        val result = json.result
 
-            return home to robotsInHome
+        logger.info("${json.status} ${json.success}")
+        if (json.status == "ok" && json.success) {
+            home = Home(rooms = result.rooms)
+            robots = getRobots(devices = result.devices, products = result.products)
+
+            persist(home, HOME_FILENAME)
+            persist(robots, ROBOTS_FILENAME)
+
+            return home to robots
         } else {
             throw RuntimeException("getUserHome returned with error '${json.status}', message (if any): '${json.msg}'")
         }
@@ -134,7 +150,9 @@ class RoborockRestApi(@Autowired val credentials: RoborockCredentials) {
         private val logger by LoggerDelegate()
 
         const val AUTH_FILENAME = "auth.json"
-        const val HOME_FILENAME = "home.json"
+        const val HOME_DETAILS_FILENAME = "home-detail.json"
+        const val HOME_FILENAME = "user-home.json"
+        const val ROBOTS_FILENAME = "robots.json"
 
         const val BASE_URL = "https://euiot.roborock.com"
         const val LOGIN_PATH = "/api/v1/login"
@@ -182,7 +200,7 @@ class RoborockRestApi(@Autowired val credentials: RoborockCredentials) {
             // placeholder for future use
             val bodyHash = ""
             val nonce = Utils.generateNonce()
-            val timestamp = Date().time / 1000
+            val timestamp = Utils.getTimeSeconds()
 
             val signature = arrayOf(
                 rriot.userId,
@@ -217,7 +235,7 @@ class RoborockRestApi(@Autowired val credentials: RoborockCredentials) {
                     deviceId = device.duid,
                     deviceName = device.name,
                     deviceInformation = device,
-                    productInformation = products.find { product -> product.id === device.productId }
+                    productInformation = products.find { product -> product.id == device.productId }
                         ?: throw RuntimeException("Unable to resolve product information for product id '${device.productId}'"))
             }
         }
