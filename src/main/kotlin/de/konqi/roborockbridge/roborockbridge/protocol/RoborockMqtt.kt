@@ -2,13 +2,8 @@ package de.konqi.roborockbridge.roborockbridge.protocol
 
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.login.Rriot
-import kotlinx.serialization.json.Json
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
-import javax.crypto.Cipher
-import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.SecretKeySpec
-import kotlin.random.Random
 
 class RoborockMqtt(rriot: Rriot) {
     private val username = Utils.calcHexMd5(arrayOf(rriot.userId, rriot.mqttKey).joinToString(":")).substring(2, 10)
@@ -17,7 +12,8 @@ class RoborockMqtt(rriot: Rriot) {
 
     // maybe store clientId somewhere or generate a static string e.g. MD5(username)
     private val clientId = "${Utils.CLIENT_ID_SHORT}_${Utils.generateNonce()}"
-    private val topic = "rr/m/o/${rriot.userId}/${username}/#"
+    private val subscribeTopic = "rr/m/o/${rriot.userId}/${username}/#"
+    private val publishTopic = "rr/m/i/${rriot.userId}/${username}/{deviceId}"
 
     private val persistence = MemoryPersistence()
     private val mqttClient = MqttClient(broker, clientId, persistence)
@@ -52,7 +48,7 @@ class RoborockMqtt(rriot: Rriot) {
         }
 
         mqttClient.subscribe(
-            topic, 0
+            subscribeTopic, 0
         ) { topic, message -> logger.info("Lambda: New message for topic '$topic' ${message.id}") }
 
 //        mqttClient.
@@ -60,23 +56,23 @@ class RoborockMqtt(rriot: Rriot) {
     }
 
     fun disconnect() {
-        mqttClient.unsubscribe(topic)
+        mqttClient.unsubscribe(subscribeTopic)
 
         if (mqttClient.isConnected) {
             mqttClient.disconnect()
         }
     }
 
+    fun publishRequest(deviceId: String) {
+        val topic = publishTopic.replace("{deviceId", deviceId)
+
+//        RawMessage()
+
+//        mqttClient.publish(topic, message)
+    }
+
     companion object {
         private val logger by LoggerDelegate()
-
-        // @Todo this does not belong here
-        private var idCounter = 1
-        private val endpoint = Utils.generateNonce()
-        private val nonce = Utils.generateNonce()
-
-        // hardcoded in librrcodec.so, encrypted by the value of "com.roborock.iotsdk.appsecret" (see https://gist.github.com/rovo89/dff47ed19fca0dfdda77503e66c2b7c7)
-        private const val RR_APPSECRET_SALT = "TXdfu\$jyZ#TZHsg4"
 
 //        private fun sendRequest(
 //            deviceId: String,
