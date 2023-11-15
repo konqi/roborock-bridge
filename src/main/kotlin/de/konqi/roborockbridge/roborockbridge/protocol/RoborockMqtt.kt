@@ -1,31 +1,53 @@
 package de.konqi.roborockbridge.roborockbridge.protocol
 
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
-import de.konqi.roborockbridge.roborockbridge.protocol.dto.login.Rriot
+import de.konqi.roborockbridge.roborockbridge.RoborockData
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.Request101
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.RequestMethodEnum
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class RoborockMqtt(rriot: Rriot) {
-    private val username = Utils.calcHexMd5(arrayOf(rriot.userId, rriot.mqttKey).joinToString(":")).substring(2, 10)
-    private val password = Utils.calcHexMd5(arrayOf(rriot.sessionId, rriot.mqttKey).joinToString(":")).substring(16)
-    private val broker = rriot.remote.mqttServer
+@Component
+class RoborockMqtt() {
+    @Autowired
+    private lateinit var roborockData: RoborockData
+
+    private val username: String
+        get() = Utils.calcHexMd5(
+            arrayOf(
+                roborockData.rriot.userId,
+                roborockData.rriot.mqttKey
+            ).joinToString(":")
+        ).substring(2, 10)
+    private val password: String
+        get() = Utils.calcHexMd5(
+            arrayOf(
+                roborockData.rriot.sessionId,
+                roborockData.rriot.mqttKey
+            ).joinToString(":")
+        ).substring(16)
+    private val broker: String get() = roborockData.rriot.remote.mqttServer
 
     // maybe store clientId somewhere or generate a static string e.g. MD5(username)
     private val clientId = "${Utils.CLIENT_ID_SHORT}_${Utils.generateNonce()}"
-    private val subscribeTopic = "rr/m/o/${rriot.userId}/${username}/#"
-    private val publishTopic = "rr/m/i/${rriot.userId}/${username}/{deviceId}"
+    private val subscribeTopic: String get() = "rr/m/o/${roborockData.rriot.userId}/${username}/#"
+    private val publishTopic: String get() = "rr/m/i/${roborockData.rriot.userId}/${username}/{deviceId}"
 
     private val persistence = MemoryPersistence()
-    private val mqttClient = MqttClient(broker, clientId, persistence)
+
+    private lateinit var mqttClient: MqttClient
 
     fun connect() {
+        mqttClient = MqttClient(broker, clientId, persistence)
+
         val connectionOptions = MqttConnectOptions().also {
             it.keepAliveInterval = 60
             it.isCleanSession = true
             it.userName = username
             it.password = password.toCharArray()
         }
-        val foo = null
         mqttClient.setCallback(object : MqttCallback {
             override fun connectionLost(cause: Throwable?) {
                 logger.warn("Connection lost")
@@ -42,17 +64,17 @@ class RoborockMqtt(rriot: Rriot) {
         })
 
         mqttClient.connect(connectionOptions)
+    }
 
+    fun subscribe() {
         if (!mqttClient.isConnected) {
             throw RuntimeException("Unable to connect to mqtt broker")
         }
 
+        logger.info("Subscribing to topic $subscribeTopic")
         mqttClient.subscribe(
             subscribeTopic, 0
         ) { topic, message -> logger.info("Lambda: New message for topic '$topic' ${message.id}") }
-
-//        mqttClient.
-        // sendRequest(deviceId, 'get_prop', ['get_status'])
     }
 
     fun disconnect() {
@@ -63,68 +85,19 @@ class RoborockMqtt(rriot: Rriot) {
         }
     }
 
-    fun publishRequest(deviceId: String) {
-        val topic = publishTopic.replace("{deviceId", deviceId)
+    fun publishStatusRequest(deviceId: String, deviceLocalKey: String) {
+        val topic = publishTopic.replace("{deviceId}", deviceId)
+        logger.info("Requesting status via topic $topic")
 
-//        RawMessage()
-
-//        mqttClient.publish(topic, message)
+        val request = Request101(
+            key = deviceLocalKey,
+            method = RequestMethodEnum.GET_PROP, parameters = arrayOf("get_status")
+        )
+        logger.info("Request payload: ${String(request.payload)}")
+        mqttClient.publish(topic, MqttMessage(request.bytes))
     }
 
     companion object {
         private val logger by LoggerDelegate()
-
-//        private fun sendRequest(
-//            deviceId: String,
-//            method: String,
-//            params: List<String> = emptyList(),
-//            secure: Boolean = false
-//        ) {
-//            val timestamp = Utils.getTimeSeconds()
-//            val requestId = idCounter++
-//            val body = mapOf("id" to requestId, "method" to method, "params" to params)
-//            if (secure) {
-//                body.plus("security" to mapOf("endpoint" to endpoint, "nonce" to nonce))
-//            }
-//            val serializedBody = Json.encodeToString(body)
-//            val payload = mapOf("t" to timestamp, "dps": mapOf("101": serializedBody))
-//            val serializedPayload = Json.encodeToString(payload)
-//            sendRaw(deviceId, 101, timestamp, serializedPayload)
-//        }
-
-//        private fun encodeTimestamp(timestamp: Long): String {
-//            return timestamp.toString(16).padStart(8, '0').split("").let {
-//                arrayOf(5, 6, 3, 7, 1, 2, 0, 4).joinToString("") { swapIndex -> it[swapIndex] }
-//            }
-//        }
-
-//        private fun sendRaw(deviceId: String, /* 101 */ protocol: Int, timestamp: Long, payload: String) {
-//            val localKey = "" // from user-home find device and use localkey
-//            val aesKey = Utils.calcMd5("${encodeTimestamp(timestamp)}${localKey}${RR_APPSECRET_SALT}")
-//
-//            val cipher = Cipher.getInstance("aes-128-ecb").also {
-//                it.init(Cipher.ENCRYPT_MODE, SecretKeySpec(aesKey,"AES"), IvParameterSpec(Random.Default.nextBytes(16)))
-//            }
-//            cipher.update(payload)
-//            cipher.doFinal()
-
-
-//            const localKey = localKeys.get(deviceId);
-//            const aesKey = md5bin(_encodeTimestamp(timestamp) + localKey + salt);
-//            const cipher = crypto.createCipheriv('aes-128-ecb', aesKey, null);
-//            const encrypted = Buffer.concat([cipher.update(payload), cipher.final()]);
-//            const msg = Buffer.alloc(23 + encrypted.length);
-//            msg.write('1.0');
-//            msg.writeUint32BE(seq++ & 0xffffffff, 3);
-//            msg.writeUint32BE(random++ & 0xffffffff, 7);
-//            msg.writeUint32BE(timestamp, 11);
-//            msg.writeUint16BE(protocol, 15);
-//            msg.writeUint16BE(encrypted.length, 17);
-//            encrypted.copy(msg, 19);
-//            const crc32 = CRC32.buf(msg.subarray(0, msg.length - 4)) >>> 0;
-//            msg.writeUint32BE(crc32, msg.length - 4);
-//            client.publish(`rr/m/i/${rriot.u}/${mqttUser}/${deviceId}`, msg);
-//        }
-
     }
 }

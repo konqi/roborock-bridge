@@ -5,13 +5,14 @@ import java.nio.ByteBuffer
 class BinaryMessageHeader(private val headerBuffer: ByteBuffer = ByteBuffer.allocate((HEADER_SIZE))) : BinaryProtocol {
     var protocolVersion: String
         get() = ByteArray(3).run {
+            headerBuffer.position(0)
             headerBuffer.get(this, 0, size)
             String(this)
         }
         set(value) {
             headerBuffer.run {
                 position(0)
-                val protocolVersionBytes = protocolVersion.toByteArray()
+                val protocolVersionBytes = value.toByteArray()
                 // TODO: assert protocolVersionByes.size == 3
                 put(protocolVersionBytes, 0, 3)
             }

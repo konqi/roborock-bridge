@@ -12,9 +12,17 @@ import java.util.concurrent.Executors
 import kotlin.system.exitProcess
 
 @Service
-class BridgeService(@Autowired val roborockRestApi: RoborockRestApi) : DisposableBean {
+class BridgeService() : DisposableBean {
+    @Autowired
+    lateinit var roborockRestApi: RoborockRestApi
+
+    @Autowired
+    lateinit var roborockData: RoborockData
+
+    @Autowired
+    lateinit var mqttClient: RoborockMqtt
+
     private var run = true
-    private lateinit var mqttClient: RoborockMqtt
 
     @EventListener(ApplicationReadyEvent::class)
     fun worker() {
@@ -29,15 +37,24 @@ class BridgeService(@Autowired val roborockRestApi: RoborockRestApi) : Disposabl
         }
 
         val (home, robots) = roborockRestApi.getUserHome()
+        roborockData.home = home
+        roborockData.robots = robots
+        roborockData.rriot = roborockRestApi.rriot
 
-        mqttClient = RoborockMqtt(roborockRestApi.rriot)
         mqttClient.connect()
-        println("connect")
+        mqttClient.subscribe()
 
-        while (run) {
-            println("sleep 1000ms")
-            Thread.sleep(1000)
-        }
+//        while (run) {
+//        println("sleep 1000ms")
+//        Thread.sleep(1000)
+        val deviceId = roborockData.robots[0].deviceId
+        val deviceLocalKey = roborockData.robots.first { it.deviceId == deviceId }.deviceInformation.localKey
+        mqttClient.publishStatusRequest(deviceId = deviceId, deviceLocalKey = deviceLocalKey)
+
+//        println("sleep 5000ms (wait for response)")
+//        Thread.sleep(5000)
+//        println("sleep ended")
+//        }
     }
 
     override fun destroy() {

@@ -4,26 +4,28 @@ import java.nio.ByteBuffer
 import java.util.zip.CRC32
 
 open class BinaryMessage(input: ByteArray? = null) : BinaryProtocol {
-    val header = if(input != null) BinaryMessageHeader(
-        ByteBuffer.wrap(
-            input,
-            0,
-            BinaryMessageHeader.HEADER_SIZE
-        )
-    ) else BinaryMessageHeader()
-    private var payloadBuffer = if(input != null) ByteBuffer.wrap(
-        input,
-        BinaryMessageHeader.HEADER_SIZE,
-        header.payloadLength.toInt()
-    ) else ByteBuffer.allocate(0)
-    private val checksumBuffer = if(input != null) ByteBuffer.wrap(
-        input,
-        input.size - Long.SIZE_BYTES,
-        Long.SIZE_BYTES
-    ) else ByteBuffer.allocate(Long.SIZE_BYTES)
+    val header = BinaryMessageHeader(ByteBuffer.allocate(BinaryMessageHeader.HEADER_SIZE).also {
+        if (input != null) {
+            it.put(input, 0, BinaryMessageHeader.HEADER_SIZE)
+        }
+    })
+    private var payloadBuffer = if (input != null) {
+        ByteBuffer.allocate(header.payloadLength.toInt()).also {
+            it.put(
+                input,
+                BinaryMessageHeader.HEADER_SIZE,
+                input.size - BinaryMessageHeader.HEADER_SIZE - Long.SIZE_BYTES
+            )
+        }
+    } else ByteBuffer.allocate(0)
+    private val checksumBuffer = ByteBuffer.allocate(UInt.SIZE_BYTES).also {
+        if (input != null) {
+            it.put(input, input.size - Long.SIZE_BYTES, Long.SIZE_BYTES)
+        }
+    }
 
     open var payload: ByteArray
-        get() = payloadBuffer.array().copyOfRange(payloadBuffer.position(), payloadBuffer.limit())
+        get() = payloadBuffer.array()
         set(value) {
             payloadBuffer = ByteBuffer.wrap(value)
 
@@ -31,18 +33,18 @@ open class BinaryMessage(input: ByteArray? = null) : BinaryProtocol {
             header.payloadLength = value.size.toUShort()
         }
 
-    val checksum: Long get() = checksumBuffer.getLong(0)
+    val checksum: UInt get() = checksumBuffer.getInt(0).toUInt()
 
-    val calculatedChecksum: Long
+    val calculatedChecksum: UInt
         get() = CRC32().run {
             update(header.bytes)
             update(payloadBuffer.array())
-            value
+            value.toUInt()
         }
 
     override val bytes: ByteArray
         get() = ByteBuffer.allocate(BinaryMessageHeader.HEADER_SIZE + payloadBuffer.capacity() + checksumBuffer.capacity())
             .put(header.bytes)
             .put(payloadBuffer)
-            .putLong(calculatedChecksum).array()
+            .putInt(calculatedChecksum.toInt()).array()
 }
