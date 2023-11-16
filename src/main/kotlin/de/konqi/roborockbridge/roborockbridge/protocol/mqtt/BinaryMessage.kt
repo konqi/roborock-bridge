@@ -14,13 +14,13 @@ open class BinaryMessage(input: ByteArray? = null) : BinaryProtocol {
             it.put(
                 input,
                 BinaryMessageHeader.HEADER_SIZE,
-                input.size - BinaryMessageHeader.HEADER_SIZE - Long.SIZE_BYTES
+                input.size - BinaryMessageHeader.HEADER_SIZE - UInt.SIZE_BYTES
             )
         }
     } else ByteBuffer.allocate(0)
     private val checksumBuffer = ByteBuffer.allocate(UInt.SIZE_BYTES).also {
         if (input != null) {
-            it.put(input, input.size - Long.SIZE_BYTES, Long.SIZE_BYTES)
+            it.put(input, input.size - UInt.SIZE_BYTES, UInt.SIZE_BYTES)
         }
     }
 
