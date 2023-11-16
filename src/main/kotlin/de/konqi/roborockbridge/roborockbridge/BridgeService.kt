@@ -42,14 +42,15 @@ class BridgeService() : DisposableBean {
         roborockData.rriot = roborockRestApi.rriot
 
         mqttClient.connect()
-        mqttClient.subscribe()
+
+        val deviceId = roborockData.robots[0].deviceId
+        val deviceLocalKey = roborockData.robots.first { it.deviceId == deviceId }.deviceInformation.localKey
+        mqttClient.monitorDevice(deviceId = deviceId, key = deviceLocalKey)
 
 //        while (run) {
 //        println("sleep 1000ms")
 //        Thread.sleep(1000)
-        val deviceId = roborockData.robots[0].deviceId
-        val deviceLocalKey = roborockData.robots.first { it.deviceId == deviceId }.deviceInformation.localKey
-        mqttClient.publishStatusRequest(deviceId = deviceId, deviceLocalKey = deviceLocalKey)
+//        mqttClient.publishStatusRequest(deviceId = deviceId, deviceLocalKey = deviceLocalKey)
 
 //        println("sleep 5000ms (wait for response)")
 //        Thread.sleep(5000)
