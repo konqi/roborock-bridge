@@ -3,7 +3,6 @@ package de.konqi.roborockbridge.roborockbridge.protocol
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail.Device
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail.Product
-import de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail.Room
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail.UserHomeDto
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.login.ApiResponseDto
 import de.konqi.roborockbridge.roborockbridge.protocol.dto.login.AuthenticationResponseData
@@ -27,7 +26,6 @@ import java.security.MessageDigest
 import java.util.*
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
-import kotlin.RuntimeException
 
 @OptIn(ExperimentalSerializationApi::class)
 @Component
@@ -166,7 +164,7 @@ class RoborockRestApi(@Autowired val credentials: RoborockCredentials) {
             val md5 = MessageDigest.getInstance("MD5")
             md5.update(username.toByteArray())
             // might have to change this if application gets banned for some reason
-            md5.update(Utils.CLIENT_ID.toByteArray())
+            md5.update(ProtocolUtils.CLIENT_ID.toByteArray())
 
             return String(Base64.getEncoder().encode(md5.digest()))
         }
@@ -194,13 +192,13 @@ class RoborockRestApi(@Autowired val credentials: RoborockCredentials) {
             path: String /*, queryParams: String = "", body: String = ""*/
         ): String {
             logger.debug("creating auth header for request path '$path'")
-            val pathnameHash = Utils.calcHexMd5(path)
+            val pathnameHash = ProtocolUtils.calcHexMd5(path)
             // placeholder for future use
             val queryParamsHash = ""
             // placeholder for future use
             val bodyHash = ""
-            val nonce = Utils.generateNonce()
-            val timestamp = Utils.getTimeSeconds()
+            val nonce = ProtocolUtils.generateNonce()
+            val timestamp = ProtocolUtils.getTimeSeconds()
 
             val signature = arrayOf(
                 rriot.userId,

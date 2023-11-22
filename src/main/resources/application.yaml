@@ -1,2 +1,6 @@
-username: user
-password: secret
+username: user   # your roborock account username (email address)
+password: secret # your roborock account password
+roborock-mqtt:
+  app_secret_salt: TXdfu$jyZ#TZHsg4    # extracted from decompiled roborock app
+  nonce_generation_salt: ThisIsASecret # just a random string for entropy
+  endpoint: aAbBz0                     # 6 char string to use as an identifier

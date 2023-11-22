@@ -1,9 +1,9 @@
-package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
+package de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 
-data class MqttResponse @JsonCreator constructor(
+data class Protocol102Wrapper @JsonCreator constructor(
     @get:JsonProperty("t")
     val timestamp: UInt,
     val dps: Map<String, String>

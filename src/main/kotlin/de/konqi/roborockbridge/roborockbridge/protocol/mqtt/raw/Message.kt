@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
+package de.konqi.roborockbridge.roborockbridge.protocol.mqtt.raw
 
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random

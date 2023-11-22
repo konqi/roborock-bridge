@@ -1,11 +1,13 @@
 package de.konqi.roborockbridge.roborockbridge.protocol
 
 import org.springframework.security.crypto.codec.Hex
+import org.springframework.stereotype.Component
 import java.security.MessageDigest
 import java.util.*
 import kotlin.random.Random
 
-class Utils {
+@Component
+class ProtocolUtils {
     companion object {
         const val CLIENT_ID = "RoborockBridge"
         const val CLIENT_ID_SHORT = "rrb"

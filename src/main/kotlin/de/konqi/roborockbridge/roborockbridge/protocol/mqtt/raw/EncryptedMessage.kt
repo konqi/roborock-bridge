@@ -1,7 +1,7 @@
-package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
+package de.konqi.roborockbridge.roborockbridge.protocol.mqtt.raw
 
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
-import de.konqi.roborockbridge.roborockbridge.protocol.Utils
+import de.konqi.roborockbridge.roborockbridge.protocol.ProtocolUtils
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
@@ -12,7 +12,7 @@ open class EncryptedMessage(private val key: String, raw: ByteArray? = null) : M
             super.payload = encode(value)
         }
 
-    private val aesKey: ByteArray get() = Utils.calcMd5("${encodeTimestamp(header.timestamp.toLong())}${key}${RR_APPSECRET_SALT}")
+    private val aesKey: ByteArray get() = ProtocolUtils.calcMd5("${encodeTimestamp(header.timestamp.toLong())}${key}$RR_APPSECRET_SALT")
 
     private fun decode(payload: ByteArray): ByteArray {
         val cipher = Cipher.getInstance(CIPHER).also {

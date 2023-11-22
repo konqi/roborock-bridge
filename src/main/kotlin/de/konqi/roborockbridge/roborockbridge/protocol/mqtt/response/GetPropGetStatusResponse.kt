@@ -1,9 +1,8 @@
-package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
+package de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-
-data class Result(
+data class GetPropGetStatusResponse(
     @get:JsonProperty("msg_ver") val msg_ver: Int,
     @get:JsonProperty("msg_seq") val msg_seq: Int,
     val state: Int,
@@ -54,9 +53,4 @@ data class Result(
     val events: Array<Int>,
     @get:JsonProperty("switch_status") val switch_status: Int,
     @get:JsonProperty("last_clean_t") val last_clean_t: Int
-)
-
-data class Response102(
-    val id: String,
-    val result: Array<Result> = emptyArray()
 )

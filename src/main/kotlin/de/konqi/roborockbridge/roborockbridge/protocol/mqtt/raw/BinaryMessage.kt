@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
+package de.konqi.roborockbridge.roborockbridge.protocol.mqtt.raw
 
 import java.nio.ByteBuffer
 import java.util.zip.CRC32
@@ -41,6 +41,8 @@ open class BinaryMessage(input: ByteArray? = null) : BinaryProtocol {
             update(payloadBuffer.array())
             value.toUInt()
         }
+
+    val valid: Boolean get() = checksum == calculatedChecksum
 
     override val bytes: ByteArray
         get() = ByteBuffer.allocate(BinaryMessageHeader.HEADER_SIZE + payloadBuffer.capacity() + checksumBuffer.capacity())

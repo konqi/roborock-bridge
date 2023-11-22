@@ -1,9 +1,9 @@
 package de.konqi.roborockbridge.roborockbridge.protocol
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
 import de.konqi.roborockbridge.roborockbridge.RoborockData
+import de.konqi.roborockbridge.roborockbridge.protocol.helper.DeviceKeyMemory
+import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.*
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
@@ -16,15 +16,27 @@ class RoborockMqtt() {
     @Autowired
     private lateinit var roborockData: RoborockData
 
+    @Autowired
+    private lateinit var requestMemory: RequestMemory
+
+    @Autowired
+    private lateinit var deviceKeyMemory: DeviceKeyMemory
+
+    @Autowired
+    private lateinit var messageDecoder: MessageDecoder
+
+    @Autowired
+    private lateinit var request101Factory: Request101Factory
+
     private val username: String
-        get() = Utils.calcHexMd5(
+        get() = ProtocolUtils.calcHexMd5(
             arrayOf(
                 roborockData.rriot.userId,
                 roborockData.rriot.mqttKey
             ).joinToString(":")
         ).substring(2, 10)
     private val password: String
-        get() = Utils.calcHexMd5(
+        get() = ProtocolUtils.calcHexMd5(
             arrayOf(
                 roborockData.rriot.sessionId,
                 roborockData.rriot.mqttKey
@@ -33,25 +45,23 @@ class RoborockMqtt() {
     private val broker: String get() = roborockData.rriot.remote.mqttServer
 
     // maybe store clientId somewhere or generate a static string e.g. MD5(username)
-    private val clientId = "${Utils.CLIENT_ID_SHORT}_${Utils.generateNonce()}"
+    private val clientId = "${ProtocolUtils.CLIENT_ID_SHORT}_${ProtocolUtils.generateNonce()}"
     private val subscribeTopic: String get() = "rr/m/o/${roborockData.rriot.userId}/${username}/#"
     private val publishTopic: String get() = "rr/m/i/${roborockData.rriot.userId}/${username}/{deviceId}"
-
-    private val deviceKeyMap = HashMap<String, String>()
 
     private val persistence = MemoryPersistence()
 
     private lateinit var mqttClient: MqttClient
 
     fun monitorDevice(deviceId: String, key: String) {
-        deviceKeyMap[deviceId] = key
+        deviceKeyMemory[deviceId] = key
 
         // start polling loop
     }
 
     @Scheduled(fixedDelay = 10000)
     fun pollStatus() {
-        deviceKeyMap.keys.forEach { deviceId ->
+        deviceKeyMemory.keys.forEach { deviceId ->
             logger.debug("Polling $deviceId")
             publishStatusRequest(deviceId)
         }
@@ -106,19 +116,9 @@ class RoborockMqtt() {
     }
 
     fun handleMessage(deviceId: String, payload: ByteArray) {
-        val data = EncryptedMessage(deviceKeyMap[deviceId]!!, payload)
-        val protocol = "${data.header.protocol}"
-        logger.info("Protocol ${protocol}, message: ${String(data.payload)}")
+        messageDecoder.decode(deviceKeyMemory[deviceId]!!, payload)
 
-        val mqttResponse: MqttResponse = objectMapper.readValue(data.payload)
-        mqttResponse.dps.keys.all { it == protocol }
-        val body = mqttResponse.dps[protocol]
-        if (body != null) {
-            val response102: Response102 = objectMapper.readValue(body)
-            logger.info("${response102.result[0].common_status}")
-            // TODO: Match response to request?
-            // TODO: Forward reponse to mqtt
-        }
+        // TODO: Forward response to mqtt
     }
 
 
@@ -131,25 +131,30 @@ class RoborockMqtt() {
     }
 
     private fun publishStatusRequest(deviceId: String) {
-        val deviceKey = deviceKeyMap[deviceId]
+        val deviceKey = deviceKeyMemory[deviceId]
         if (deviceKey != null) {
             val topic = publishTopic.replace("{deviceId}", deviceId)
             logger.info("Requesting status via topic $topic")
+            val method = RequestMethod.GET_PROP
 
-            val request = Request101(
+            val (requestId, message) = request101Factory.createRequest(
                 key = deviceKey,
-                method = RequestMethodEnum.GET_PROP, parameters = arrayOf("get_status")
+                method = method, parameters = arrayOf("get_status")
             )
 
-            logger.trace("Request payload: ${String(request.payload)}")
-            mqttClient.publish(topic, MqttMessage(request.bytes))
+            logger.trace("Request payload: ${String(message.payload)}")
+            requestMemory[requestId.toInt()] = method
+            mqttClient.publish(topic, MqttMessage(message.bytes))
         } else {
             logger.info("Unable to request status for $deviceId.")
         }
     }
 
+
     companion object {
         private val logger by LoggerDelegate()
-        private val objectMapper = jacksonObjectMapper()
+
+
+
     }
 }
