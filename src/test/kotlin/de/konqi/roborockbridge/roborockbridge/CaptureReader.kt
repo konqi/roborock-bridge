@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.konqi.roborockbridge.roborockbridge.protocol.MessageDecoder
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.DeviceKeyMemory
+import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.*
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.request.Protocol101Wrapper
@@ -60,7 +61,6 @@ class CaptureReader {
         // Note: This test expects the deviceKeyMemory to contain the correct key for your device
         //       The key can be configured by setting override.device-memory[deviceId]=deviceKey
         //       in application.properties or application.yaml
-        val requestIdToNonceMap = HashMap<Int, String>()
 
         FileInputStream("simple.csv").use { fis ->
             Scanner(fis).use { scanner ->
@@ -78,11 +78,15 @@ class CaptureReader {
                                         )
                                     }"
                                 )
-                                requestMemory[decodedMessage.dps.data.requestId] =
-                                    RequestMethod.valueOf(decodedMessage.dps.data.method.uppercase())
+
                                 if (decodedMessage.dps.data.security != null) {
-                                    requestIdToNonceMap[decodedMessage.dps.data.requestId] =
-                                        decodedMessage.dps.data.security!!.nonce
+                                    requestMemory[decodedMessage.dps.data.requestId] = RequestData(
+                                        RequestMethod.valueOf(decodedMessage.dps.data.method.uppercase()),
+                                        Hex.decode(decodedMessage.dps.data.security!!.nonce)
+                                    )
+                                } else {
+                                    requestMemory[decodedMessage.dps.data.requestId] =
+                                        RequestData(RequestMethod.valueOf(decodedMessage.dps.data.method.uppercase()))
                                 }
                             }
 
@@ -101,6 +105,7 @@ class CaptureReader {
                                     println(" <- ${decodedMessage.id}")
                                 }
                             }
+
 
                             else -> {
                                 println("Unknown message type")

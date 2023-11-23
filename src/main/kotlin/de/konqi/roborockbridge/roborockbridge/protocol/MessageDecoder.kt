@@ -17,8 +17,7 @@ import org.springframework.stereotype.Component
 class MessageDecoder(
     @Autowired private val requestMemory: RequestMemory,
     @Autowired private val deviceKeyMemory: DeviceKeyMemory,
-    @Autowired private val objectMapper: ObjectMapper,
-    @Autowired private val request101Factory: Request101Factory
+    @Autowired private val objectMapper: ObjectMapper
 ) {
     fun decode(deviceId: String, payload: ByteArray): Any? {
         val key = deviceKeyMemory[deviceId]
@@ -48,7 +47,8 @@ class MessageDecoder(
         data: EncryptedMessage
     ): Any? {
         val protocol = "${data.header.protocol}"
-        val protocol102Wrapper: de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.Protocol102Wrapper = objectMapper.readValue(data.payload)
+        val protocol102Wrapper: de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.Protocol102Wrapper =
+            objectMapper.readValue(data.payload)
         if (!protocol102Wrapper.dps.keys.all { it == protocol }) {
             logger.warn("Weird packet $protocol102Wrapper")
             return null
@@ -59,25 +59,32 @@ class MessageDecoder(
             // Reed as generic Json, because we need the request id to match the correct response object
             val protocol102Dps: Protocol102Dps<ArrayNode> = objectMapper.readValue(body)
             // the id matches the request, the request determines the response object
-            val requestMethod = requestMemory.getAndDestroy(protocol102Dps.id)
+            val requestData = requestMemory[protocol102Dps.id]
 
-            return if(requestMethod != null) {
+            return if (requestData != null) {
+                if(requestData.nonce == null) {
+                    // for map requests we get two responses, one with a confirmation of the request (proto 102) and map data (proto 301)
+                    requestMemory.remove(protocol102Dps.id)
+                }
+
                 Protocol102Dps(
                     id = protocol102Dps.id,
-                    result = objectMapper.treeToValue(protocol102Dps.result, requestMethod.decodesTo.java),
-                    method = requestMethod
+                    result = objectMapper.treeToValue(protocol102Dps.result, requestData.method.decodesTo.java),
+                    method = requestData.method
                 )
             } else protocol102Dps
         } else null
     }
 
-    fun readProtocol301Body(data: EncryptedMessage, nonceOverride: ByteArray? = null): ByteArray {
+    fun readProtocol301Body(data: EncryptedMessage): ByteArray? {
         val mqttResponse = Response301(data.payload)
+        val requestData = requestMemory.getAndDestroy(mqttResponse.id.toInt())
         // get nonce for id (assuming the id in the response matches the one in the request)
-        val nonce = nonceOverride ?: request101Factory.generateNonce(mqttResponse.id)
-        val decrypted = mqttResponse.decrypt(nonce)
+        return if (requestData?.nonce != null) {
+            val decrypted = mqttResponse.decrypt(requestData.nonce)
 //        println(decrypted)
-        return decrypted
+            decrypted
+        } else null
     }
 
     companion object {

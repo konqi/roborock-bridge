@@ -38,6 +38,7 @@ open class EncryptedMessage(private val key: String, raw: ByteArray? = null) : M
 
     companion object {
         // hardcoded in librrcodec.so, encrypted by the value of "com.roborock.iotsdk.appsecret" (see https://gist.github.com/rovo89/dff47ed19fca0dfdda77503e66c2b7c7)
+        // @Todo this is configurable via application.yml - either use it or don't make it configurable
         private const val RR_APPSECRET_SALT = "TXdfu\$jyZ#TZHsg4"
         private const val CIPHER = "AES/ECB/PKCS5Padding"
         private val logger by LoggerDelegate()

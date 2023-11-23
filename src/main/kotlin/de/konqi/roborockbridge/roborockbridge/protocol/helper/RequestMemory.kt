@@ -3,17 +3,19 @@ package de.konqi.roborockbridge.roborockbridge.protocol.helper
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.RequestMethod
 import org.springframework.stereotype.Component
 
-@Component
-class RequestMemory : LinkedHashMap<Int, RequestMethod>(MAX_MEMORY_SIZE) {
+data class RequestData(val method:RequestMethod, val nonce: ByteArray? = null)
 
-    override fun put(key: Int, value: RequestMethod): RequestMethod? {
+@Component
+class RequestMemory : LinkedHashMap<Int, RequestData>(MAX_MEMORY_SIZE) {
+
+    override fun put(key: Int, value: RequestData): RequestData? {
         if (size >= MAX_MEMORY_SIZE) {
             pollLastEntry()
         }
         return super.put(key, value)
     }
 
-    fun getAndDestroy(key: Int): RequestMethod? {
+    fun getAndDestroy(key: Int): RequestData? {
         val value = super.get(key)
         if (value != null) {
             super.remove(key)

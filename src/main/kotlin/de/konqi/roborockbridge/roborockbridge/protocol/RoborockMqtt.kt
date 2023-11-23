@@ -3,6 +3,7 @@ package de.konqi.roborockbridge.roborockbridge.protocol
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
 import de.konqi.roborockbridge.roborockbridge.RoborockData
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.DeviceKeyMemory
+import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.*
 import org.eclipse.paho.client.mqttv3.*
@@ -143,7 +144,7 @@ class RoborockMqtt() {
             )
 
             logger.trace("Request payload: ${String(message.payload)}")
-            requestMemory[requestId.toInt()] = method
+            requestMemory[requestId.toInt()] = RequestData(method)
             mqttClient.publish(topic, MqttMessage(message.bytes))
         } else {
             logger.info("Unable to request status for $deviceId.")
@@ -153,8 +154,5 @@ class RoborockMqtt() {
 
     companion object {
         private val logger by LoggerDelegate()
-
-
-
     }
 }

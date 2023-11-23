@@ -4,3 +4,6 @@ roborock-mqtt:
   appsecret_salt: TXdfu$jyZ#TZHsg4
   nonce_generation_salt: thisIsDevSalt.highDosesOfVitaminJ
   endpoint: aAbBz0
+override:
+  device-memory:
+    deviceId: deviceKey # useful if you have a mqtt traffic capture and want to decode it
