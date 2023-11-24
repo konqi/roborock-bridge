@@ -11,6 +11,7 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import java.nio.ByteBuffer
 
 @Component
 class RoborockMqtt() {
@@ -109,14 +110,14 @@ class RoborockMqtt() {
             try {
                 logger.info("Lambda: New message for topic '$topic' ${message.id}")
                 val device = topic.substring(topic.lastIndexOf('/') + 1)
-                handleMessage(deviceId = device, payload = message.payload)
+                handleMessage(deviceId = device, payload = ByteBuffer.wrap(message.payload))
             } catch (e: Exception) {
                 logger.error("Error while handling message from topic $topic", e)
             }
         }
     }
 
-    fun handleMessage(deviceId: String, payload: ByteArray) {
+    fun handleMessage(deviceId: String, payload: ByteBuffer) {
         messageDecoder.decode(deviceKeyMemory[deviceId]!!, payload)
 
         // TODO: Forward response to mqtt

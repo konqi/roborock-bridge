@@ -12,6 +12,7 @@ import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.request.Protocol101W
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.Protocol102Dps
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import java.nio.ByteBuffer
 
 @Component
 class MessageDecoder(
@@ -19,7 +20,7 @@ class MessageDecoder(
     @Autowired private val deviceKeyMemory: DeviceKeyMemory,
     @Autowired private val objectMapper: ObjectMapper
 ) {
-    fun decode(deviceId: String, payload: ByteArray): Any? {
+    fun decode(deviceId: String, payload: ByteBuffer): Any? {
         val key = deviceKeyMemory[deviceId]
         val data = EncryptedMessage(key!!, payload)
         if (!data.valid) {

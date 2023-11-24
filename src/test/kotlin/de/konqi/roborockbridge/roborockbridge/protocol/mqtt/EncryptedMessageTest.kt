@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.security.crypto.codec.Hex
+import java.nio.ByteBuffer
 
 class EncryptedMessageTest {
     @ParameterizedTest()
@@ -19,7 +20,7 @@ class EncryptedMessageTest {
             it.header.protocol = protocol
             it.payload = payload
         }
-        val decryptedMessage = EncryptedMessage(KEY, encryptedMessage.bytes)
+        val decryptedMessage = EncryptedMessage(KEY, ByteBuffer.wrap(encryptedMessage.bytes))
 
         assertTrue(encryptedMessage.payload contentEquals payload)
         assertTrue(decryptedMessage.payload contentEquals payload)

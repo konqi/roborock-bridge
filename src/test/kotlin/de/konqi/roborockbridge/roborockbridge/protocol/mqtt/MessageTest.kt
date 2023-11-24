@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.nio.ByteBuffer
 
 class MessageTest {
     @ParameterizedTest()
@@ -16,7 +17,7 @@ class MessageTest {
             it.header.protocol = protocol
             it.payload = payload
         }
-        val serialized = message.bytes
+        val serialized = ByteBuffer.wrap(message.bytes)
 
         val deserialized = Message(serialized)
 
@@ -30,7 +31,7 @@ class MessageTest {
         assertEquals(deserialized.header.random, random, "the random field must be set")
         assertEquals(deserialized.header.protocol, protocol, "the protocol field must be set")
         assertEquals(deserialized.header.timestamp, timestamp, "the timestamp field must be set")
-        assertEquals(message.calculatedChecksum, deserialized.checksum, "checksum at receiving end must match sender")
+        assertEquals(message.calculatedChecksum, deserialized.footer.checksum, "checksum at receiving end must match sender")
     }
 
     companion object {

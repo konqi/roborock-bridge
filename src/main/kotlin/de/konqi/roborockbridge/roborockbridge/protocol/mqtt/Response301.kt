@@ -114,7 +114,6 @@ data class Room(
     var yMax: Int
 )
 
-
 class MapImage(data: MapDataSection) {
     val top = data.header.getInt(data.header.limit() - 16).toUInt()
     val left = data.header.getInt(data.header.limit() - 12).toUInt()
@@ -123,6 +122,7 @@ class MapImage(data: MapDataSection) {
     val rooms = HashMap<Int, Room>()
 
     init {
+        println("left: $left, top: $top")
         val image = BufferedImage(width.toInt(), height.toInt(), BufferedImage.TRANSLUCENT)
         for (y in 0..<height.toInt()) {
             val yOffset = width.toInt() * y

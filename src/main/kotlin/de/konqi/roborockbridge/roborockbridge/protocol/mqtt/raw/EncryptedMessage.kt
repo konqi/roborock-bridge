@@ -2,10 +2,21 @@ package de.konqi.roborockbridge.roborockbridge.protocol.mqtt.raw
 
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
 import de.konqi.roborockbridge.roborockbridge.protocol.ProtocolUtils
+import java.nio.ByteBuffer
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
-open class EncryptedMessage(private val key: String, raw: ByteArray? = null) : Message(raw) {
+open class EncryptedMessage : Message {
+    private val key: String
+
+    constructor(key: String) : super() {
+        this.key = key
+    }
+
+    constructor(key: String, buffer: ByteBuffer) : super(buffer) {
+        this.key = key
+    }
+
     override var payload: ByteArray
         get() = decode(super.payload)
         set(value) {

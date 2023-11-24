@@ -22,6 +22,7 @@ import org.springframework.security.crypto.codec.Hex
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.lang.Exception
+import java.nio.ByteBuffer
 import java.util.Scanner
 
 @SpringBootTest(classes = [CaptureReader.Companion.ProvideJackson::class, RequestMemory::class, DeviceKeyMemory::class, MessageDecoder::class])
@@ -69,7 +70,8 @@ class CaptureReader {
                         val line = scanner.nextLine()
                         val (topic, message) = line.split(":")
                         val deviceId = topic.substring(topic.lastIndexOf("/") + 1)
-                        when (val decodedMessage = messageDecoder.decode(deviceId, Hex.decode(message))) {
+                        when (val decodedMessage =
+                            messageDecoder.decode(deviceId, ByteBuffer.wrap(Hex.decode(message)))) {
                             is Protocol101Wrapper -> {
                                 println(
                                     "->  ${decodedMessage.dps.data.requestId} ${decodedMessage.dps.data.method} ${
