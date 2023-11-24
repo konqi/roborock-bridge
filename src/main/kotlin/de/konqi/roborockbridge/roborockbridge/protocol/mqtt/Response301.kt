@@ -3,7 +3,6 @@ package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
 import org.springframework.security.crypto.codec.Hex
 import java.awt.Color
 import java.awt.image.BufferedImage
-import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
@@ -12,7 +11,6 @@ import javax.crypto.Cipher
 import javax.crypto.CipherInputStream
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import javax.imageio.ImageIO
 import kotlin.experimental.and
 import kotlin.math.max
 import kotlin.math.min
@@ -60,7 +58,7 @@ enum class SectionType(val id: UShort) {
 }
 
 class MapData(val data: ByteArray) {
-    val buffer = ByteBuffer.wrap(data).asReadOnlyBuffer().order(ByteOrder.LITTLE_ENDIAN)
+    val buffer = ByteBuffer.wrap(data).asReadOnlyBuffer().order(ByteOrder.LITTLE_ENDIAN).mark()
 
     val preamble = String(ByteArray(2).apply { buffer.get(this) })
 
@@ -68,7 +66,7 @@ class MapData(val data: ByteArray) {
     val bodyLength = buffer.getInt().toUInt()
 
     // wrap byte buffer around existing data to save memory
-    val header = buffer.duplicate().position(0).slice().limit(headerLength.toInt()).order(ByteOrder.LITTLE_ENDIAN)
+    val header = buffer.reset().slice().limit(headerLength.toInt()).order(ByteOrder.LITTLE_ENDIAN)
     val body = buffer.duplicate().position(headerLength.toInt()).slice().order(ByteOrder.LITTLE_ENDIAN)
     val digest = String(Hex.encode(data.copyOfRange(data.size - 20, data.size)))
     val calculatedDigest: String
@@ -93,14 +91,15 @@ class MapData(val data: ByteArray) {
     }
 }
 
-class MapDataSection(val buffer: ByteBuffer) {
-    // Use absolute methods to not move position
-    val type = buffer.getShort(0).toUShort()
-    val headerLength = buffer.getShort(2).toUShort()
-    val bodyLength = buffer.getInt(4).toUInt()
+class MapDataSection(buffer: ByteBuffer) {
+    val slice: ByteBuffer = buffer.slice().order(ByteOrder.LITTLE_ENDIAN)
+    val type = slice.getShort(0).toUShort()
+    val headerLength = slice.getShort(2).toUShort()
+    val bodyLength = slice.getInt(4).toUInt()
 
-    val header = buffer.duplicate().position(0).limit(headerLength.toInt()).order(ByteOrder.LITTLE_ENDIAN)
-    val body = buffer.duplicate().position(headerLength.toInt()).slice().order(ByteOrder.LITTLE_ENDIAN)
+    val header = slice.duplicate().limit(headerLength.toInt()).order(ByteOrder.LITTLE_ENDIAN)
+    val body = slice.duplicate().position(headerLength.toInt()).slice().order(ByteOrder.LITTLE_ENDIAN)
+        .limit(bodyLength.toInt())
 
     fun getResolvedType(): SectionType? {
         return SectionType.fromValue(type)
@@ -114,7 +113,44 @@ data class Room(
     var yMax: Int
 )
 
-class MapImage(data: MapDataSection) {
+class MapDataObjectPosition(data: MapDataSection) {
+    val x = data.body.getInt(0).toUInt()
+    val y = data.body.getInt(UInt.SIZE_BYTES).toUInt()
+    val a = if (data.bodyLength > UInt.SIZE_BYTES.toUInt() * 2u) data.body.getInt(2 * UInt.SIZE_BYTES) else null
+}
+
+class MapDataPath(data: MapDataSection) {
+    val end = data.header.getInt(4).toUInt()
+    val length = data.header.getInt(8).toUInt()
+    val size = data.header.getInt(12).toUInt()
+    val angle = data.header.getInt(16).toUInt()
+    val points = List<Pair<UShort, UShort>>(length.toInt()) { index ->
+        data.body.getShort(index * 4).toUShort() to data.body.getShort(index * 4 + 2).toUShort()
+    }
+}
+
+class MapDataObstacle(data: MapDataSection) {
+    // TODO
+}
+
+class MapDataArea(data: MapDataSection) {
+    // TODO
+}
+
+class MapDataWalls(data: MapDataSection) {
+    // TODO
+}
+
+class MapDataZones(data: MapDataSection) {
+    // TODO
+}
+
+class MapDataGotoTarget(data: MapDataSection) {
+    val x = data.body.getShort(0).toUShort()
+    val y = data.body.getShort(UShort.SIZE_BYTES).toUShort()
+}
+
+class MapDataImage(data: MapDataSection) {
     val top = data.header.getInt(data.header.limit() - 16).toUInt()
     val left = data.header.getInt(data.header.limit() - 12).toUInt()
     val height = data.header.getInt(data.header.limit() - 8).toUInt()
@@ -122,7 +158,6 @@ class MapImage(data: MapDataSection) {
     val rooms = HashMap<Int, Room>()
 
     init {
-        println("left: $left, top: $top")
         val image = BufferedImage(width.toInt(), height.toInt(), BufferedImage.TRANSLUCENT)
         for (y in 0..<height.toInt()) {
             val yOffset = width.toInt() * y
@@ -226,10 +261,88 @@ class Response301(data: ByteArray) {
             val section = MapDataSection(mapData.body)
             println("${section.type}=${section.getResolvedType()} ${section.body.limit()}")
 
-            if (section.getResolvedType() == SectionType.IMAGE) {
-                val image = MapImage(section)
-                println(image)
+            when (section.getResolvedType()) {
+                SectionType.IMAGE -> {
+                    val image = MapDataImage(section)
+                    println(image)
+                }
+
+                SectionType.CHARGER -> {
+                    val pos = MapDataObjectPosition(section)
+                    println(pos)
+                }
+
+                SectionType.ROBOT_POSITION -> {
+                    val pos = MapDataObjectPosition(section)
+                    println(pos)
+                }
+
+                SectionType.PATH -> {
+                    val path = MapDataPath(section)
+                    println(path)
+                }
+
+                SectionType.GOTO_PATH -> {
+                    val path = MapDataPath(section)
+                    println(path)
+                }
+
+                SectionType.GOTO_PREDICTED_PATH -> {
+                    val path = MapDataPath(section)
+                    println(path)
+                }
+
+                SectionType.CURRENTLY_CLEANED_ZONES -> {
+                    val zone = MapDataZones(section)
+                    println(zone)
+                }
+
+                SectionType.GOTO_TARGET -> {
+                    val target = MapDataGotoTarget(section)
+                    println(target)
+                }
+
+                SectionType.VIRTUAL_WALLS -> {
+                    MapDataWalls(section)
+                }
+
+                SectionType.NO_GO_AREAS -> {
+                    MapDataArea(section)
+                }
+
+                SectionType.NO_MOPPING_AREAS -> {
+                    MapDataArea(section)
+                }
+
+                in arrayOf(SectionType.OBSTACLES, SectionType.IGNORED_OBSTACLES, SectionType.OBSTACLES_WITH_PHOTO, SectionType.IGNORED_OBSTACLES_WITH_PHOTO) -> {
+                    val obstacle = MapDataObstacle(section)
+                    println(obstacle)
+                }
+
+//                SectionType.OBSTACLES -> {
+//                    MapDataObstacle(section)
+//                }
+//
+//                SectionType.IGNORED_OBSTACLES -> {
+//                    MapDataObstacle(section)
+//                }
+//
+//                SectionType.OBSTACLES_WITH_PHOTO -> {
+//                    MapDataObstacle(section)
+//                }
+//
+//                SectionType.IGNORED_OBSTACLES_WITH_PHOTO -> {
+//                    MapDataObstacle(section)
+//                }
+
+                // TODO Blocks?
+
+                else -> {
+                    println(section.getResolvedType())
+                }
             }
+
+            mapData.body.position(mapData.body.position() + section.headerLength.toInt() + section.bodyLength.toInt())
         }
 
         return decrypted
