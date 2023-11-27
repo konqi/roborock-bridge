@@ -1,11 +1,12 @@
 package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.GetConsumableResponse
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.GetPropGetStatusResponse
 import kotlin.reflect.KClass
 
-enum class RequestMethod(val value: String, val decodesTo: KClass<*> = ArrayNode::class) {
+enum class RequestMethod(val value: String, val decodesTo: KClass<*> = JsonNode::class) {
     GET_PROP("get_prop", Array<GetPropGetStatusResponse>::class), // "params":["get_status"]
     GET_MAP_V1("get_map_v1", Array<String>::class),
     APP_GET_INIT_STATUS("app_get_init_status"),
@@ -29,7 +30,7 @@ enum class RequestMethod(val value: String, val decodesTo: KClass<*> = ArrayNode
     // "params":[{"data":[{"data":{"appType":"roborock","language":"en_US","mcc":"not-cn","mnc":"*","mobileBrand":"*","mobileModel":"sdk_gphone64_arm64","os":"android","osVersion":"33","pluginVersion":"3426","region":"Europe/Berlin"},"times":[1700310528],"type":2}]
     APP_STAT("app_stat", Array<String>::class),
 
-    SET_COLLISION_AVOID_STATUS("set_collision_avoid_status"), // {"status":1}
+    SET_COLLISION_AVOID_STATUS("set_collision_avoid_status", Array<String>::class), // {"status":1}
     GET_LED_STATUS("get_led_status", Array<Int>::class),
     GET_CHILD_LOCK_STATUS("get_child_lock_status"),
     GET_VALLEY_ELECTRICITY_TIMER("get_valley_electricity_timer"),
@@ -38,6 +39,6 @@ enum class RequestMethod(val value: String, val decodesTo: KClass<*> = ArrayNode
     GET_SOUND_PROGRESS("get_sound_progress"),
     GET_SOUND_VOLUME("get_sound_volume", Array<Int>::class),
     SET_CARPET_CLEAN_MODE("set_carpet_clean_mode", Array<String>::class), // {"carpet_clean_mode":0}
-    APP_GET_CARPET_DEEP_CLEAN_STATUS("app_get_carpet_deep_clean_status"),
+    APP_GET_CARPET_DEEP_CLEAN_STATUS("app_get_carpet_deep_clean_status", JsonNode::class),
     GET_CARPET_MODE("get_carpet_mode"),
 }

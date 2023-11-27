@@ -1,6 +1,7 @@
 package de.konqi.roborockbridge.roborockbridge
 
 import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -63,7 +64,7 @@ class CaptureReader {
         //       The key can be configured by setting override.device-memory[deviceId]=deviceKey
         //       in application.properties or application.yaml
 
-        FileInputStream("simple.csv").use { fis ->
+        FileInputStream("simpleHouse.csv").use { fis ->
             Scanner(fis).use { scanner ->
                 while (scanner.hasNextLine()) {
                     try {
@@ -95,7 +96,7 @@ class CaptureReader {
                             is Protocol102Dps<*> -> {
                                 if (decodedMessage.result is Array<*> && (decodedMessage.result as Array<*>)[0] is GetPropGetStatusResponse) {
                                     println(" <- ${decodedMessage.id} ${RequestMethod.GET_PROP.value}")
-                                } else if (decodedMessage.result is ArrayNode) {
+                                } else if (decodedMessage.result is ArrayNode || decodedMessage.result is JsonNode) {
                                     println(
                                         " <- ${decodedMessage.id} ${decodedMessage.method?.value} !!arbitrary!! ${
                                             objectMapper.writeValueAsString(
@@ -104,17 +105,20 @@ class CaptureReader {
                                         }"
                                     )
                                 } else {
-                                    println(" <- ${decodedMessage.id}")
+                                    println(" <- ${decodedMessage.id} ${objectMapper.writeValueAsString(decodedMessage.result)}")
                                 }
                             }
 
+                            is Response301 -> {
+                                // not much to do with the map data in a test
+                            }
 
                             else -> {
                                 println("Unknown message type")
                             }
                         }
                     } catch (e: Exception) {
-                        println(e)
+                        e.printStackTrace()
                     }
                 }
             }

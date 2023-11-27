@@ -50,7 +50,7 @@ data class GetPropGetStatusResponse(
     @get:JsonProperty("rss") val rss: Int,
     @get:JsonProperty("dss") val dss: Int,
     @get:JsonProperty("common_status") val common_status: Int,
-    val events: Array<Int>,
+    val events: Array<String>,
     @get:JsonProperty("switch_status") val switch_status: Int,
     @get:JsonProperty("last_clean_t") val last_clean_t: Int
 )
