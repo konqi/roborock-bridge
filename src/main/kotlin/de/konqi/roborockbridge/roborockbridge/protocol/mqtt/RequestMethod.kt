@@ -1,7 +1,6 @@
 package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ArrayNode
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.GetConsumableResponse
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.GetPropGetStatusResponse
 import kotlin.reflect.KClass
@@ -29,6 +28,7 @@ enum class RequestMethod(val value: String, val decodesTo: KClass<*> = JsonNode:
     // "params":[{"data":[{"data":[{"id":10404,"times":[1700310530]}],"type":0},{"data":[{"durations":[[1545,1700140184]],"id":20000}],"type":1}],"ver":"0.1"}]
     // "params":[{"data":[{"data":{"appType":"roborock","language":"en_US","mcc":"not-cn","mnc":"*","mobileBrand":"*","mobileModel":"sdk_gphone64_arm64","os":"android","osVersion":"33","pluginVersion":"3426","region":"Europe/Berlin"},"times":[1700310528],"type":2}]
     APP_STAT("app_stat", Array<String>::class),
+    APP_CHARGE("app_charge", Array<String>::class),
 
     SET_COLLISION_AVOID_STATUS("set_collision_avoid_status", Array<String>::class), // {"status":1}
     GET_LED_STATUS("get_led_status", Array<Int>::class),

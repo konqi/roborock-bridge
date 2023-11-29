@@ -1,20 +1,16 @@
 package de.konqi.roborockbridge.roborockbridge
 
 import de.konqi.roborockbridge.roborockbridge.protocol.RoborockMqtt
-import de.konqi.roborockbridge.roborockbridge.protocol.RoborockRestApi
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import kotlin.system.exitProcess
 
 @Service
 class BridgeService() : DisposableBean {
-    @Autowired
-    lateinit var roborockRestApi: RoborockRestApi
+//    @Autowired
+//    lateinit var roborockRestApi: RoborockRestApi
 
     @Autowired
     lateinit var roborockData: RoborockData
@@ -26,20 +22,20 @@ class BridgeService() : DisposableBean {
 
     @EventListener(ApplicationReadyEvent::class)
     fun worker() {
-        if (!roborockRestApi.isLoggedIn) {
-            if (roborockRestApi.canLogIn) {
-                roborockRestApi.login()
-                roborockRestApi.getHomeDetail()
-            } else {
-                logger.error("Missing configuration. Exiting.")
-                exitProcess(-1)
-            }
-        }
-
-        val (home, robots) = roborockRestApi.getUserHome()
-        roborockData.home = home
-        roborockData.robots = robots
-        roborockData.rriot = roborockRestApi.rriot
+//        if (!roborockRestApi.isLoggedIn) {
+//            if (roborockRestApi.canLogIn) {
+//                roborockRestApi.login()
+//                roborockRestApi.getHomeDetail()
+//            } else {
+//                logger.error("Missing configuration. Exiting.")
+//                exitProcess(-1)
+//            }
+//        }
+//
+//        val (home, robots) = roborockRestApi.getUserHome()
+//        roborockData.home = home
+//        roborockData.robots = robots
+//        roborockData.rriot = roborockRestApi.rriot
 
         mqttClient.connect()
 

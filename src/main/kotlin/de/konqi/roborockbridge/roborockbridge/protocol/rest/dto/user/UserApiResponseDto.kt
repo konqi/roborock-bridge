@@ -1,12 +1,10 @@
-package de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail
+package de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.user
 
-import kotlinx.datetime.Instant
-import kotlinx.serialization.Serializable
+import java.time.Instant
 
-@Serializable
-data class UserHomeDto(
-    val api: String,
-    val result: UserHomeData,
+data class UserApiResponseDto<T>(
+    val api: String?,
+    val result: T,
     val status: String, // UNAUTHORIZED, ok
     val success: Boolean, // true
     // msg, code, timestamp are set when call is unauthorized (probably an api gateway)

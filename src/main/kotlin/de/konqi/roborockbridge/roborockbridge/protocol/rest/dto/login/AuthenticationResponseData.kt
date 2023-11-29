@@ -1,8 +1,5 @@
-package de.konqi.roborockbridge.roborockbridge.protocol.dto.login
+package de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.login
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 data class AuthenticationResponseData(
     val uid: Int? = null,
     val country: String? = null,

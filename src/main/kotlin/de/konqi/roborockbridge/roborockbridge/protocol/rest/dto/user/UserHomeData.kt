@@ -1,8 +1,9 @@
-package de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail
+package de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.user
 
-import kotlinx.serialization.Serializable
+import de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.homedetail.Device
+import de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.homedetail.Product
+import de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.homedetail.Room
 
-@Serializable
 data class UserHomeData(
     val id: Long,
     val name: String,

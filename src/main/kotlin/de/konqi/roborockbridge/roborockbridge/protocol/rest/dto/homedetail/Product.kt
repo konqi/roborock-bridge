@@ -1,8 +1,5 @@
-package de.konqi.roborockbridge.roborockbridge.protocol.dto.homedetail
+package de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.homedetail
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 data class Product(
     val id: String,
     val name: String,

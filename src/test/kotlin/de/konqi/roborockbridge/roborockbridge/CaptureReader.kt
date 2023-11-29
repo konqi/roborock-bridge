@@ -59,12 +59,13 @@ class CaptureReader {
     }
 
     @Test
+//    @Disabled
     fun readSimple() {
         // Note: This test expects the deviceKeyMemory to contain the correct key for your device
         //       The key can be configured by setting override.device-memory[deviceId]=deviceKey
         //       in application.properties or application.yaml
 
-        FileInputStream("simpleHouse.csv").use { fis ->
+        FileInputStream("stopTheCount.csv").use { fis ->
             Scanner(fis).use { scanner ->
                 while (scanner.hasNextLine()) {
                     try {
@@ -95,7 +96,7 @@ class CaptureReader {
 
                             is Protocol102Dps<*> -> {
                                 if (decodedMessage.result is Array<*> && (decodedMessage.result as Array<*>)[0] is GetPropGetStatusResponse) {
-                                    println(" <- ${decodedMessage.id} ${RequestMethod.GET_PROP.value}")
+                                    println(" <- ${decodedMessage.id} ${RequestMethod.GET_PROP.value} ${objectMapper.writeValueAsString(decodedMessage.result)}")
                                 } else if (decodedMessage.result is ArrayNode || decodedMessage.result is JsonNode) {
                                     println(
                                         " <- ${decodedMessage.id} ${decodedMessage.method?.value} !!arbitrary!! ${
