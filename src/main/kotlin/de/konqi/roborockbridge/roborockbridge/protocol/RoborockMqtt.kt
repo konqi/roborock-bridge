@@ -1,7 +1,6 @@
 package de.konqi.roborockbridge.roborockbridge.protocol
 
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
-import de.konqi.roborockbridge.roborockbridge.RoborockData
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.DeviceKeyMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
@@ -9,47 +8,37 @@ import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.*
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.nio.ByteBuffer
 
 @Component
-class RoborockMqtt() {
-    @Autowired
-    private lateinit var roborockData: RoborockData
-
-    @Autowired
-    private lateinit var requestMemory: RequestMemory
-
-    @Autowired
-    private lateinit var deviceKeyMemory: DeviceKeyMemory
-
-    @Autowired
-    private lateinit var messageDecoder: MessageDecoder
-
-    @Autowired
-    private lateinit var request101Factory: Request101Factory
-
+class RoborockMqtt(
+    @Autowired private val roborockCredentials: RoborockCredentials,
+    @Autowired private val requestMemory: RequestMemory,
+    @Autowired private val deviceKeyMemory: DeviceKeyMemory,
+    @Autowired private val messageDecoder: MessageDecoder,
+    @Autowired private val request101Factory: Request101Factory
+) {
     private val username: String
         get() = ProtocolUtils.calcHexMd5(
             arrayOf(
-                roborockData.rriot.userId,
-                roborockData.rriot.mqttKey
+                roborockCredentials.userId,
+                roborockCredentials.mqttKey
             ).joinToString(":")
         ).substring(2, 10)
     private val password: String
         get() = ProtocolUtils.calcHexMd5(
             arrayOf(
-                roborockData.rriot.sessionId,
-                roborockData.rriot.mqttKey
+                roborockCredentials.sessionId,
+                roborockCredentials.mqttKey
             ).joinToString(":")
         ).substring(16)
-    private val broker: String get() = roborockData.rriot.remote.mqttServer
+    private val broker: String get() = roborockCredentials.mqttServer!!
 
     // maybe store clientId somewhere or generate a static string e.g. MD5(username)
     private val clientId = "${ProtocolUtils.CLIENT_ID_SHORT}_${ProtocolUtils.generateNonce()}"
-    private val subscribeTopic: String get() = "rr/m/o/${roborockData.rriot.userId}/${username}/#"
-    private val publishTopic: String get() = "rr/m/i/${roborockData.rriot.userId}/${username}/{deviceId}"
+    private val subscribeTopic: String get() = "rr/m/o/${roborockCredentials.userId}/${username}/#"
+    private val publishTopic: String get() = "rr/m/i/${roborockCredentials.userId}/${username}/{deviceId}"
 
     private val persistence = MemoryPersistence()
 
@@ -61,11 +50,11 @@ class RoborockMqtt() {
         // start polling loop
     }
 
-    @Scheduled(fixedDelay = 10000)
+    //    @Scheduled(fixedDelay = 10000)
     fun pollStatus() {
         deviceKeyMemory.keys.forEach { deviceId ->
             logger.debug("Polling $deviceId")
-            publishStatusRequest(deviceId)
+            publishRequest(deviceId, RequestMethod.GET_PROP, listOf("get_status"))
         }
     }
 
@@ -132,25 +121,26 @@ class RoborockMqtt() {
         }
     }
 
-    private fun publishStatusRequest(deviceId: String) {
-        val deviceKey = deviceKeyMemory[deviceId]
-        if (deviceKey != null) {
-            val topic = publishTopic.replace("{deviceId}", deviceId)
-            logger.info("Requesting status via topic $topic")
-            val method = RequestMethod.GET_PROP
-
-            val (requestId, message) = request101Factory.createRequest(
-                key = deviceKey,
-                method = method, parameters = arrayOf("get_status")
-            )
-
-            logger.trace("Request payload: ${String(message.payload)}")
-            requestMemory[requestId.toInt()] = RequestData(method)
-            mqttClient.publish(topic, MqttMessage(message.bytes))
-        } else {
-            logger.info("Unable to request status for $deviceId.")
-        }
+    @Throws(RuntimeException::class)
+    private fun publishRequest(deviceId: String, method: RequestMethod, parameters: List<String>? = null) {
+        val key = deviceKeyMemory[deviceId] ?: throw RuntimeException("No key available for device $deviceId")
+        val topic = publishTopic.replace("{deviceId}", deviceId)
+        val (requestId, message) = if (parameters != null) request101Factory.createRequest(
+            method = method,
+            key = key,
+            parameters = parameters
+        ) else request101Factory.createRequest(method = method, key = key)
+        mqttClient.publish(topic, MqttMessage(message.bytes))
+        logger.info("Published  ${method.value} request via topic $topic")
+        requestMemory[requestId.toInt()] = RequestData(method)
     }
+
+    fun publishReturnToChargingStation(deviceId: String) {
+        publishRequest(deviceId, RequestMethod.APP_CHARGE)
+    }
+//    private fun publishStatusRequest(deviceId: String) {
+//        publishRequest(deviceId, RequestMethod.GET_PROP, listOf("get_status"))
+//    }
 
 
     companion object {

@@ -4,3 +4,19 @@ roborock-mqtt:
   app_secret_salt: TXdfu$jyZ#TZHsg4    # extracted from decompiled roborock app
   nonce_generation_salt: ThisIsASecret # just a random string for entropy
   endpoint: aAbBz0                     # 6 char string to use as an identifier
+bridge-mqtt:
+  url: tcp://localhost:1883
+  client_id: mqtt-bridge-service
+  base_topic: mqtt-bridge
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:h2
+#    driver-class-name: org.sqlite.JDBC
+#    url: jdbc:sqlite:db.sqlite
+  jpa:
+#    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+

@@ -1,1 +1,10 @@
 services:
+  broker:
+      image: eclipse-mosquitto
+      ports:
+        - "1883:1883"
+        - "9001:9001"
+      volumes:
+        - type: bind
+          source: mosquitto.conf
+          target: /mosquitto/config/mosquitto.conf

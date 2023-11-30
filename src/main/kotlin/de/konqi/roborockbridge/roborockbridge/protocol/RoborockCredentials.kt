@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
+import de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.login.Rriot
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.springframework.beans.factory.annotation.Autowired
@@ -43,7 +44,10 @@ class RoborockCredentials(@Autowired private val objectMapper: ObjectMapper) {
     var homeId: Int? = null
 
     @get:JsonIgnore
-    val isValid: Boolean get() = username.isNotBlank() && password.isNotBlank()
+    val isConfigured: Boolean get() = username.isNotBlank() && password.isNotBlank()
+
+    @get:JsonIgnore
+    val isLoggedIn: Boolean get() = !userId.isNullOrBlank()
 
     @PostConstruct
     fun validate() {
@@ -73,6 +77,16 @@ class RoborockCredentials(@Autowired private val objectMapper: ObjectMapper) {
         } catch (e: FileNotFoundException) {
             logger.info("Could not load credentials. No file '${CREDENTIAL_FILENAME}' found.")
         }
+    }
+
+    fun fromRriot(rriot: Rriot, restApiToken: String) {
+        this.hmacKey = rriot.hmacKey
+        this.sessionId = rriot.sessionId
+        this.restApiRemote = rriot.remote.api
+        this.restApiToken = restApiToken
+        this.mqttServer = rriot.remote.mqttServer
+        this.mqttKey = rriot.mqttKey
+        this.userId = rriot.userId
     }
 
     @PreDestroy

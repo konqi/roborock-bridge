@@ -40,7 +40,7 @@ class Request101Factory(
     fun createRequest(
         method: RequestMethod,
         key: String,
-        parameters: Array<String> = emptyArray(),
+        parameters: List<String> = emptyList(),
         secure: Boolean = false
     ): Request101 {
         val message = EncryptedMessage(key)

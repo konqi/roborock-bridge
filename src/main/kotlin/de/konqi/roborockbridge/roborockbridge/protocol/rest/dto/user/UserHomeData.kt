@@ -5,7 +5,7 @@ import de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.homedetail.Produ
 import de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.homedetail.Room
 
 data class UserHomeData(
-    val id: Long,
+    val id: Int,
     val name: String,
     // probably a decimal value
     val lon: String?,

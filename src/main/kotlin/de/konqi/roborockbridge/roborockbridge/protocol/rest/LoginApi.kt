@@ -5,7 +5,8 @@ import de.konqi.roborockbridge.roborockbridge.protocol.RoborockCredentials
 import de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.login.ApiResponseDto
 import de.konqi.roborockbridge.roborockbridge.protocol.rest.dto.login.AuthenticationResponseData
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.web.client.RestTemplateBuilder
+import org.springframework.context.annotation.Bean
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -13,10 +14,18 @@ import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.AuthenticationServiceException
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.core.userdetails.UsernameNotFoundException
+import org.springframework.stereotype.Component
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.UriComponentsBuilder
 
-class LoginApi(@Autowired val credentials: RoborockCredentials, @Autowired private val restTemplate: RestTemplate) {
+@Component
+class DefaultRestTemplate : RestTemplate()
+
+@Component
+class LoginApi(
+    @Autowired val credentials: RoborockCredentials,
+    @Autowired private val restTemplate: DefaultRestTemplate
+) {
     fun login(): AuthenticationResponseData {
         val request = HttpEntity(HttpEntity.EMPTY, HttpHeaders().apply {
             set("header_clientid", credentials.clientId)

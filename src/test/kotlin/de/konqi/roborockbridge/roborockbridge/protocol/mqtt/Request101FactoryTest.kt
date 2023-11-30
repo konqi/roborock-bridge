@@ -19,7 +19,7 @@ class Request101FactoryTest(
 ) {
     @Test
     fun getPayload() {
-        val (_, requestAmessage) = request101Factory.createRequest(key = "secret", method = RequestMethod.GET_PROP, parameters = arrayOf("get_status"))
+        val (_, requestAmessage) = request101Factory.createRequest(key = "secret", method = RequestMethod.GET_PROP, parameters = listOf("get_status"))
         val requestAPayload = String(requestAmessage.payload)
 
         assertFalse("security" in requestAPayload)

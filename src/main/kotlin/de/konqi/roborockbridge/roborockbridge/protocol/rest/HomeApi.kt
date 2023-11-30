@@ -9,8 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpMethod
 import org.springframework.http.client.ClientHttpRequestInterceptor
+import org.springframework.stereotype.Component
 import org.springframework.web.client.RestTemplate
 
+@Component
 class HomeApiRestTemplate(@Autowired private val credentials: RoborockCredentials) : RestTemplate() {
     @PostConstruct
     private fun setup() {
@@ -24,6 +26,7 @@ class HomeApiRestTemplate(@Autowired private val credentials: RoborockCredential
     }
 }
 
+@Component
 class HomeApi(
     @Autowired private val credentials: RoborockCredentials,
     @Autowired private val restTemplate: HomeApiRestTemplate
