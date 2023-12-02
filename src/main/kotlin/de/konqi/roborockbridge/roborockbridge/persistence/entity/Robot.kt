@@ -1,10 +1,12 @@
 package de.konqi.roborockbridge.roborockbridge.persistence.entity
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
 
 @Entity
 @Table(uniqueConstraints = [UniqueConstraint(columnNames = ["home_id", "device_key"])])
 class Robot(
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "home_id", nullable = false)
     val home: Home,
@@ -24,6 +26,7 @@ class Robot(
     val serialNumber: String,
     @ElementCollection
     val state: Map<String, Long>,
+    @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,

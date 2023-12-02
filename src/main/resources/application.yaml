@@ -16,7 +16,7 @@ spring:
 #    url: jdbc:sqlite:db.sqlite
   jpa:
 #    database-platform: org.hibernate.community.dialect.SQLiteDialect
-    database-platform: org.hibernate.dialect.H2Dialect
+#    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
 

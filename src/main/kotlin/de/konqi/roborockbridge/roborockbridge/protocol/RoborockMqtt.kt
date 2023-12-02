@@ -1,7 +1,7 @@
 package de.konqi.roborockbridge.roborockbridge.protocol
 
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
-import de.konqi.roborockbridge.roborockbridge.protocol.helper.DeviceKeyMemory
+import de.konqi.roborockbridge.roborockbridge.persistence.RobotRepository
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.*
@@ -15,9 +15,9 @@ import java.nio.ByteBuffer
 class RoborockMqtt(
     @Autowired private val roborockCredentials: RoborockCredentials,
     @Autowired private val requestMemory: RequestMemory,
-    @Autowired private val deviceKeyMemory: DeviceKeyMemory,
     @Autowired private val messageDecoder: MessageDecoder,
-    @Autowired private val request101Factory: Request101Factory
+    @Autowired private val request101Factory: Request101Factory,
+    private val robotRepository: RobotRepository
 ) {
     private val username: String
         get() = ProtocolUtils.calcHexMd5(
@@ -44,18 +44,16 @@ class RoborockMqtt(
 
     private lateinit var mqttClient: MqttClient
 
-    fun monitorDevice(deviceId: String, key: String) {
-        deviceKeyMemory[deviceId] = key
-
+    fun monitorDevice(deviceId: String) {
         // start polling loop
     }
 
     //    @Scheduled(fixedDelay = 10000)
     fun pollStatus() {
-        deviceKeyMemory.keys.forEach { deviceId ->
-            logger.debug("Polling $deviceId")
-            publishRequest(deviceId, RequestMethod.GET_PROP, listOf("get_status"))
-        }
+//        deviceKeyMemory.keys.forEach { deviceId ->
+//            logger.debug("Polling $deviceId")
+//            publishRequest(deviceId, RequestMethod.GET_PROP, listOf("get_status"))
+//        }
     }
 
     fun connect() {
@@ -107,7 +105,9 @@ class RoborockMqtt(
     }
 
     fun handleMessage(deviceId: String, payload: ByteBuffer) {
-        messageDecoder.decode(deviceKeyMemory[deviceId]!!, payload)
+        robotRepository.getByDeviceId(deviceId).ifPresent { robot ->
+            messageDecoder.decode(robot.deviceKey, payload)
+        }
 
         // TODO: Forward response to mqtt
     }
@@ -123,13 +123,16 @@ class RoborockMqtt(
 
     @Throws(RuntimeException::class)
     private fun publishRequest(deviceId: String, method: RequestMethod, parameters: List<String>? = null) {
-        val key = deviceKeyMemory[deviceId] ?: throw RuntimeException("No key available for device $deviceId")
+        val robot = robotRepository.getByDeviceId(deviceId).orElseThrow {
+            RuntimeException("No key available for device $deviceId")
+        }
+
         val topic = publishTopic.replace("{deviceId}", deviceId)
         val (requestId, message) = if (parameters != null) request101Factory.createRequest(
             method = method,
-            key = key,
+            key = robot.deviceKey,
             parameters = parameters
-        ) else request101Factory.createRequest(method = method, key = key)
+        ) else request101Factory.createRequest(method = method, key = robot.deviceKey)
         mqttClient.publish(topic, MqttMessage(message.bytes))
         logger.info("Published  ${method.value} request via topic $topic")
         requestMemory[requestId.toInt()] = RequestData(method)

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
-import de.konqi.roborockbridge.roborockbridge.protocol.helper.DeviceKeyMemory
+import de.konqi.roborockbridge.roborockbridge.persistence.RobotRepository
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.*
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.raw.EncryptedMessage
@@ -17,12 +17,14 @@ import java.nio.ByteBuffer
 @Component
 class MessageDecoder(
     @Autowired private val requestMemory: RequestMemory,
-    @Autowired private val deviceKeyMemory: DeviceKeyMemory,
-    @Autowired private val objectMapper: ObjectMapper
+    @Autowired private val objectMapper: ObjectMapper,
+    private val robotRepository: RobotRepository
 ) {
     fun decode(deviceId: String, payload: ByteBuffer): Any? {
-        val key = deviceKeyMemory[deviceId]
-        val data = EncryptedMessage(key!!, payload)
+        val robot = robotRepository.getByDeviceId(deviceId).orElseThrow {
+            RuntimeException("Robot with deviceId '$deviceId' is unknown.")
+        }
+        val data = EncryptedMessage(robot.deviceKey, payload)
         if (!data.valid) {
             throw RuntimeException("Checksum mismatch in received message.")
         }

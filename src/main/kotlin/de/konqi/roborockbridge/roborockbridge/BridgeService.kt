@@ -15,6 +15,7 @@ import jakarta.annotation.PreDestroy
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
+import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 
 @Service
@@ -44,7 +45,7 @@ class BridgeService(
 
         val homeDetails = userApi.getUserHome(homeEntity.homeId)
 
-        roomRepository.saveAll(
+        val rooms = roomRepository.saveAll(
             homeDetails.rooms.map { Room(home = homeEntity, roomId = it.id, name = it.name) }
         )
 
@@ -72,13 +73,16 @@ class BridgeService(
         }.run { robotRepository.saveAll(this) }
 
         // announce devices on mqtt broker
-        robots.forEach {
-            bridgeMqtt.announceDevice(it.deviceId)
-        }
+        bridgeMqtt.announceHome(homeEntity)
+        robots.forEach(bridgeMqtt::announceDevice)
+        bridgeMqtt.announceRooms(rooms.toList())
     }
 
     @EventListener(ApplicationReadyEvent::class)
     fun worker() {
+        while (!bridgeMqtt.mqttClient.isConnected) {
+            Thread.sleep(1000)
+        }
         init()
 //        mqttClient.connect()
 //

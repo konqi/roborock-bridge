@@ -29,6 +29,7 @@ dependencies {
 //    implementation("org.hibernate.orm:hibernate-community-dialects")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.3")
+//    implementation("com.hivemq:hivemq-mqtt-client:1.3.0")
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
 //    implementation("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
     developmentOnly("org.springframework.boot:spring-boot-devtools")

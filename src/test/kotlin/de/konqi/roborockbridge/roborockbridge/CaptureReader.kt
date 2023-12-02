@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.konqi.roborockbridge.roborockbridge.protocol.MessageDecoder
-import de.konqi.roborockbridge.roborockbridge.protocol.helper.DeviceKeyMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.*
@@ -26,7 +25,7 @@ import java.lang.Exception
 import java.nio.ByteBuffer
 import java.util.Scanner
 
-@SpringBootTest(classes = [CaptureReader.Companion.ProvideJackson::class, RequestMemory::class, DeviceKeyMemory::class, MessageDecoder::class])
+@SpringBootTest(classes = [CaptureReader.Companion.ProvideJackson::class, RequestMemory::class, MessageDecoder::class])
 class CaptureReader {
     @Autowired
     lateinit var requestMemory: RequestMemory
@@ -41,7 +40,6 @@ class CaptureReader {
             FileInputStream("capture.json").use {
                 JsonFactory().createParser(it).use { jsonParser ->
                     var topic = ""
-                    var msg = ""
                     while (null != jsonParser.nextToken()) {
                         val fieldName = jsonParser.currentName
                         if (fieldName == "mqtt.topic") {
@@ -49,7 +47,7 @@ class CaptureReader {
                             topic = jsonParser.text
                         } else if (fieldName == "mqtt.msg") {
                             jsonParser.nextToken()
-                            msg = jsonParser.text.split(":").joinToString("")
+                            val msg = jsonParser.text.split(":").joinToString("")
                             fos.write("$topic:$msg\n".toByteArray())
                         }
                     }
