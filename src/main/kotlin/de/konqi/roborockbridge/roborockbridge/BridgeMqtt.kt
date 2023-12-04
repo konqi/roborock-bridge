@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.konqi.roborockbridge.roborockbridge.persistence.entity.Home
 import de.konqi.roborockbridge.roborockbridge.persistence.entity.Robot
 import de.konqi.roborockbridge.roborockbridge.persistence.entity.Room
+import de.konqi.roborockbridge.roborockbridge.utility.CircularConcurrentLinkedQueue
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.eclipse.paho.client.mqttv3.MqttClient
@@ -12,17 +13,16 @@ import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.util.Queue
 import java.util.concurrent.ConcurrentLinkedQueue
 
-enum class BridgeCommand(val id: String) {
+enum class CommandType(val id: String) {
     GET("get"), SET("set"), ACTION("action");
 
     companion object {
-        private val mapping = BridgeCommand.entries.associateBy(BridgeCommand::id)
+        private val mapping = CommandType.entries.associateBy(CommandType::id)
         fun fromValue(value: String) = mapping[value]
     }
 }
@@ -35,17 +35,30 @@ data class Message(
 )
 
 enum class ActionEnum(val value: String) {
-    HOME("home");
+    HOME("home"),
+    UNKNOWN("unknown");
 
     companion object {
         private val mapping = ActionEnum.entries.associateBy(ActionEnum::value)
-        fun fromValue(value: String) = mapping[value]
+        fun fromValue(value: String?) = mapping[value] ?: UNKNOWN
     }
 }
 
-data class Action(
-    val action: ActionEnum
+// need to specify target bridge / home / device
+enum class TargetType {
+    BRIDGE,
+    HOME,
+    DEVICE
+}
+
+data class Target(val type: TargetType, val identifier: String?)
+
+abstract class Command(
+    val target: Target
 )
+
+class ActionCommand(target: Target, val action: ActionEnum) : Command(target)
+class GetCommand(target: Target) : Command(target)
 
 
 @ConfigurationProperties(prefix = "bridge-mqtt")
@@ -59,6 +72,8 @@ class BridgeMqtt(
     @Autowired private val bridgeMqttConfig: BridgeMqttConfig, @Autowired private val objectMapper: ObjectMapper
 ) {
     val mqttClient = MqttClient(bridgeMqttConfig.url, bridgeMqttConfig.clientId, null)
+    val outboundMessagesQueue: Queue<Message> = ConcurrentLinkedQueue()
+    val inboundMessagesQueue = CircularConcurrentLinkedQueue<Command>(20)
 
     @PostConstruct
     fun init() {
@@ -91,18 +106,18 @@ class BridgeMqtt(
                 try {
                     handleMessage(topic, message)
                 } catch (e: Exception) {
-                    logger.error("Error while processing message: ${e.message}, Stacktrace: ${e.stackTrace}")
+                    logger.error("Error while processing message: ${e.message}, Stacktrace: ${e.printStackTrace()}")
                 }
             }
         }
     }
 
-    private final fun sectionRegex(sectionName: String): String {
-        return "(?:(?:$sectionName)/(?<$sectionName>[^/]+))"
+    private final fun sectionRegex(sectionName: String, valuePattern: String = "[^/]+"): String {
+        return "(?:(?:$sectionName)/(?<$sectionName>$valuePattern))"
     }
 
     val deviceIdExtractionRegex = Regex(
-        "${Regex.escape(bridgeMqttConfig.baseTopic)}(?:/(?:${sectionRegex(HOME)}|${sectionRegex(DEVICE)}))+(?:/(?<surplus>.*))?"
+        "${Regex.escape(bridgeMqttConfig.baseTopic)}(?:/(?:${sectionRegex(HOME, "[0-9]+")}|${sectionRegex(DEVICE)}))*(?:/(?<surplus>.*))?"
     )
 
     fun parseTopic(topic: String): Map<String, String?> {
@@ -123,7 +138,7 @@ class BridgeMqtt(
         val deviceId = topicParams[DEVICE_ID]
         val surplus = topicParams["surplus"] ?: ""
         val cmdStr = surplus.split("/").last()
-        val cmd = BridgeCommand.fromValue(cmdStr)
+        val cmd = CommandType.fromValue(cmdStr)
         val properties = surplus.split("/").let {
             val indexOfParams = it.indexOf(deviceId) + 1
             it.slice(indexOfParams..<it.size - 1)
@@ -139,28 +154,37 @@ class BridgeMqtt(
         logger.info("Received message for home '$homeId', device '$deviceId' with command '$cmd'")
 
         when (cmd) {
-            BridgeCommand.ACTION -> {
-                println(messageBody)
-                if (messageBody?.has("action") == true) {
-                    ActionEnum.fromValue(messageBody.get("action").textValue())
-                }
+            CommandType.ACTION -> {
+                inboundMessagesQueue.add(
+                    ActionCommand(
+                        action = ActionEnum.fromValue(messageBody?.get("action")?.textValue()),
+                        target = Target(type = TargetType.DEVICE, identifier = deviceId)
+                    )
+                )
             }
 
-            BridgeCommand.GET -> {}
-            BridgeCommand.SET -> {}
+            CommandType.GET -> {
+                val (targetType, targetIdentifier) = if (deviceId != null) {
+                    TargetType.DEVICE to deviceId
+                } else if (homeId != null) {
+                    TargetType.HOME to homeId.toString()
+                } else {
+                    TargetType.BRIDGE to null
+                }
+
+                inboundMessagesQueue.add(GetCommand(target = Target(type = targetType, identifier = targetIdentifier)))
+            }
+
             else -> {
                 log("Received unknown command '$cmdStr'.")
             }
         }
     }
 
-    val queue: Queue<Message> = ConcurrentLinkedQueue()
-
     @Scheduled(fixedDelay = 1000)
-    @Async
     fun queueWorker() {
-        while (!queue.isEmpty()) {
-            val message = queue.remove()
+        while (!outboundMessagesQueue.isEmpty()) {
+            val message = outboundMessagesQueue.remove()
             if (mqttClient.isConnected) {
                 mqttClient.publish(message.topic, message.message, message.qos, message.retained)
             } else {
@@ -177,7 +201,7 @@ class BridgeMqtt(
             getBridgeLogTopic()
         }
 
-        queue.add(Message(topic, message.toByteArray(), 0, false))
+        outboundMessagesQueue.add(Message(topic, message.toByteArray(), 0, false))
     }
 
     fun announceHome(home: Home) {

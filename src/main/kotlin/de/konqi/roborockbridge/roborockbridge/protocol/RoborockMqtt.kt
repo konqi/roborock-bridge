@@ -1,15 +1,20 @@
 package de.konqi.roborockbridge.roborockbridge.protocol
 
+import de.konqi.roborockbridge.roborockbridge.Command
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
 import de.konqi.roborockbridge.roborockbridge.persistence.RobotRepository
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.*
+import de.konqi.roborockbridge.roborockbridge.utility.CircularConcurrentLinkedQueue
+import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Component
 class RoborockMqtt(
@@ -18,7 +23,7 @@ class RoborockMqtt(
     @Autowired private val messageDecoder: MessageDecoder,
     @Autowired private val request101Factory: Request101Factory,
     private val robotRepository: RobotRepository
-) {
+) : Runnable {
     private val username: String
         get() = ProtocolUtils.calcHexMd5(
             arrayOf(
@@ -44,6 +49,33 @@ class RoborockMqtt(
 
     private lateinit var mqttClient: MqttClient
 
+    lateinit var thread: Thread
+
+    val inboundMessagesQueue = CircularConcurrentLinkedQueue<Any>(20)
+
+    @PostConstruct
+    private fun init() {
+        thread = Thread(this)
+    }
+
+    fun start() {
+        thread.start()
+    }
+
+    @PreDestroy
+    private fun onDestroy() {
+//        run.set(false)
+
+        disconnect()
+    }
+
+    override fun run() {
+//        run.set(true)
+
+        connect()
+//        while (run.get()) {}
+    }
+
     fun monitorDevice(deviceId: String) {
         // start polling loop
     }
@@ -56,7 +88,7 @@ class RoborockMqtt(
 //        }
     }
 
-    fun connect() {
+    private fun connect() {
         mqttClient = MqttClient(broker, clientId, persistence)
 
         val connectionOptions = MqttConnectOptions().also {
@@ -106,14 +138,17 @@ class RoborockMqtt(
 
     fun handleMessage(deviceId: String, payload: ByteBuffer) {
         robotRepository.getByDeviceId(deviceId).ifPresent { robot ->
-            messageDecoder.decode(robot.deviceKey, payload)
+            val message = messageDecoder.decode(robot.deviceKey, payload)
+            if (message != null) {
+                if (!inboundMessagesQueue.offer(message)) {
+                    logger.warn("Discarded message due to backpressure")
+                }
+            }
         }
-
-        // TODO: Forward response to mqtt
     }
 
 
-    fun disconnect() {
+    private fun disconnect() {
         mqttClient.unsubscribe(subscribeTopic)
 
         if (mqttClient.isConnected) {

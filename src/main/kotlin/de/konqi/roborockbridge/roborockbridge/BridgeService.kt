@@ -15,13 +15,28 @@ import jakarta.annotation.PreDestroy
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
-import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
+import java.util.concurrent.ConcurrentLinkedQueue
+
+enum class QueueMessageType {
+    A, B;
+}
+
+data class QueueMessage<T>(
+    val type: QueueMessageType,
+
+    val content: T
+)
+
+class InterThreadCommunication {
+    val queue = ConcurrentLinkedQueue<QueueMessage<*>>()
+
+}
 
 @Service
 //@Profile("off")
 class BridgeService(
-    @Autowired private val mqttClient: RoborockMqtt,
+    @Autowired private val roborockMqtt: RoborockMqtt,
     @Autowired private val loginApi: LoginApi,
     @Autowired private val homeApi: HomeApi,
     @Autowired private val userApi: UserApi,
@@ -84,6 +99,25 @@ class BridgeService(
             Thread.sleep(1000)
         }
         init()
+//        roborockMqtt.start()
+
+        while (run) {
+            while (bridgeMqtt.inboundMessagesQueue.size > 0) {
+                val command = bridgeMqtt.inboundMessagesQueue.remove()
+                if (command is ActionCommand) {
+                    logger.info("Oh, so I should ${command.action} ${command.target.type} ${command.target.identifier}")
+                } else if (command is GetCommand) {
+                    logger.info("Say please, or I won't GET stuff for ${command.target.type} ${command.target.identifier}")
+                }
+            }
+
+            while (roborockMqtt.inboundMessagesQueue.size > 0) {
+                val message = roborockMqtt.inboundMessagesQueue.remove()
+                logger.info("I don't know what to do with this message. $message")
+            }
+
+            Thread.sleep(200)
+        }
 //        mqttClient.connect()
 //
 //        val deviceId = roborockData.robots[0].deviceId

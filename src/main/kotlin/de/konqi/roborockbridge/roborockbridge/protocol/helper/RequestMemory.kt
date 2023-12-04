@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component
 data class RequestData(val method:RequestMethod, val nonce: ByteArray? = null)
 
 @Component
-class RequestMemory : LinkedHashMap<Int, RequestData>(MAX_MEMORY_SIZE) {
+class RequestMemory :  LinkedHashMap<Int, RequestData>(MAX_MEMORY_SIZE) {
 
     override fun put(key: Int, value: RequestData): RequestData? {
         if (size >= MAX_MEMORY_SIZE) {

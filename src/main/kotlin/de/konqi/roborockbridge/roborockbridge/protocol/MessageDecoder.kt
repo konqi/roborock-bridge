@@ -33,6 +33,7 @@ class MessageDecoder(
         logger.debug("Protocol ${protocol}, message: ${String(data.payload)}")
 
         return when (protocol) {
+            // ability to handle 101 requests is only required to decode mqtt traffic captures
             "101" -> readProtocol101Body(data)
             "102" -> readProtocol102Body(data)
             "301" -> readProtocol301Body(data)
@@ -48,7 +49,7 @@ class MessageDecoder(
 
     fun readProtocol102Body(
         data: EncryptedMessage
-    ): Any? {
+    ): Protocol102Dps<out Any>? {
         val protocol = "${data.header.protocol}"
         val protocol102Wrapper: de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.Protocol102Wrapper =
             objectMapper.readValue(data.payload)
