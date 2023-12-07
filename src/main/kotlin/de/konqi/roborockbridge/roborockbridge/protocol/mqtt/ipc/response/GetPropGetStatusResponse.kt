@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response
+package de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.response
 
 import com.fasterxml.jackson.annotation.JsonProperty
 

@@ -25,7 +25,7 @@ class Robot(
     @Column(nullable = false)
     val serialNumber: String,
     @ElementCollection
-    val state: Map<String, Long>,
+    val state: List<RobotState>,
     @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

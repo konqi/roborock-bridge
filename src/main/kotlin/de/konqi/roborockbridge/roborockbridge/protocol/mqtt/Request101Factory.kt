@@ -3,10 +3,10 @@ package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.konqi.roborockbridge.roborockbridge.protocol.ProtocolUtils
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.raw.EncryptedMessage
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.request.Protocol101Dps
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.request.Protocol101Payload
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.request.Protocol101PayloadSecurity
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.request.Protocol101Wrapper
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.request.IpcRequestDps
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.request.IpcRequestPayload
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.request.IpcRequestPayloadSecurity
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.security.crypto.codec.Hex
@@ -47,14 +47,14 @@ class Request101Factory(
         val timestamp = ProtocolUtils.getTimeSeconds()
         val requestId = requestIdCounter.incrementAndGet().toUShort()
         val nonce = generateNonce(requestId)
-        val data = Protocol101Wrapper(
-            dps = Protocol101Dps(
-                data = Protocol101Payload(
+        val data = IpcRequestWrapper(
+            dps = IpcRequestDps(
+                data = IpcRequestPayload(
                     requestId = requestId.toInt(),
                     method = method.value,
                     parameters = objectMapper.valueToTree(parameters),
                     security = if (secure)
-                        Protocol101PayloadSecurity(
+                        IpcRequestPayloadSecurity(
                             endpoint = mqttConfig.endpoint, nonce = String(Hex.encode(nonce))
                         ) else null
                 )

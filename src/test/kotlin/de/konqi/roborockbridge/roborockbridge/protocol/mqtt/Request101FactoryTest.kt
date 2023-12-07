@@ -3,8 +3,8 @@ package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.request.Protocol101Payload
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.request.Protocol101Wrapper
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.request.IpcRequestPayload
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -54,12 +54,12 @@ class Request101FactoryTest(
     fun parseRequest() {
         val nestedValue =
             """{"id":413,"method":"get_map_v1","params":{},"security":{"endpoint":"123456789","nonce":"AFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFE"}}"""
-        val parsedNestedValue: Protocol101Payload = objectMapper.readValue(nestedValue)
+        val parsedNestedValue: IpcRequestPayload = objectMapper.readValue(nestedValue)
         assertEquals(parsedNestedValue.requestId, 413)
 
         val data =
             """{"dps":{"101":"{\"id\":413,\"method\":\"get_map_v1\",\"params\":{},\"security\":{\"endpoint\":\"123456789\",\"nonce\":\"AFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFE\"}}"},"t":1700310549}"""
-        val parsed: Protocol101Wrapper = objectMapper.readValue(data)
+        val parsed: IpcRequestWrapper = objectMapper.readValue(data)
 
         assertEquals(parsed.dps.data.requestId, 413)
 

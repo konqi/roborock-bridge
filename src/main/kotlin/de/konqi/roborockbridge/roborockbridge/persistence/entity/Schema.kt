@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
 
 @Entity
+@Table(uniqueConstraints = [UniqueConstraint(columnNames = ["home_id", "schema_id"])])
 class Schema(
     @JsonIgnore
     @ManyToOne

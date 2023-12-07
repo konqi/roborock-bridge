@@ -5,27 +5,56 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import de.konqi.roborockbridge.roborockbridge.persistence.RobotRepository
+import de.konqi.roborockbridge.roborockbridge.persistence.entity.Home
+import de.konqi.roborockbridge.roborockbridge.persistence.entity.Robot
 import de.konqi.roborockbridge.roborockbridge.protocol.MessageDecoder
+import de.konqi.roborockbridge.roborockbridge.protocol.MessageWrapper
+import de.konqi.roborockbridge.roborockbridge.protocol.StatusUpdate
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.*
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.request.Protocol101Wrapper
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.GetPropGetStatusResponse
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.Protocol102Dps
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.RequestMethod
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.response.GetPropGetStatusResponse
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.response.IpcResponseDps
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.response.IpcResponseWrapper
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.Protocol301
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.Protocol301Wrapper
+import de.konqi.roborockbridge.roborockbridge.utility.cast
+import org.junit.jupiter.api.*
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.security.crypto.codec.Hex
+import org.springframework.test.context.TestPropertySource
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.lang.Exception
 import java.nio.ByteBuffer
-import java.util.Scanner
+import java.util.*
 
+
+@ConfigurationProperties(prefix = "capture-reader")
+data class CaptureReaderConfiguration(
+    val devices: Map<String, String>,
+    val wiresharkExport: String = "simple.json",
+    val csvFile: String = "simple.csv"
+)
+
+/**
+ * This class is used to decode captures of the mqtt communication by the roborock app
+ * You have to add the device key of your robot to the configuration file. The structure
+ * should be:
+ * ```capture-reader.devices[deviceId]=deviceKey```
+ *
+ * TODO: Make app print device key on first run otherwise find device key via mqtt
+ */
 @SpringBootTest(classes = [CaptureReader.Companion.ProvideJackson::class, RequestMemory::class, MessageDecoder::class])
+@TestPropertySource("classpath:application-dev.yaml")
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class CaptureReader {
     @Autowired
     lateinit var requestMemory: RequestMemory
@@ -33,11 +62,15 @@ class CaptureReader {
     @Autowired
     lateinit var messageDecoder: MessageDecoder
 
+    @Autowired
+    lateinit var captureReaderConfiguration: CaptureReaderConfiguration
+
     @Test
+    @Order(1)
     @Disabled
     fun readCapture() {
-        FileOutputStream("simple.csv").use { fos ->
-            FileInputStream("capture.json").use {
+        FileInputStream(captureReaderConfiguration.wiresharkExport).use {
+            FileOutputStream(captureReaderConfiguration.csvFile).use { fos ->
                 JsonFactory().createParser(it).use { jsonParser ->
                     var topic = ""
                     while (null != jsonParser.nextToken()) {
@@ -57,65 +90,79 @@ class CaptureReader {
     }
 
     @Test
+    @Order(2)
 //    @Disabled
     fun readSimple() {
-        // Note: This test expects the deviceKeyMemory to contain the correct key for your device
-        //       The key can be configured by setting override.device-memory[deviceId]=deviceKey
-        //       in application.properties or application.yaml
-
-        FileInputStream("stopTheCount.csv").use { fis ->
+        FileInputStream(captureReaderConfiguration.csvFile).use { fis ->
             Scanner(fis).use { scanner ->
                 while (scanner.hasNextLine()) {
                     try {
                         val line = scanner.nextLine()
                         val (topic, message) = line.split(":")
                         val deviceId = topic.substring(topic.lastIndexOf("/") + 1)
-                        when (val decodedMessage =
-                            messageDecoder.decode(deviceId, ByteBuffer.wrap(Hex.decode(message)))) {
-                            is Protocol101Wrapper -> {
-                                println(
-                                    "->  ${decodedMessage.dps.data.requestId} ${decodedMessage.dps.data.method} ${
-                                        objectMapper.writeValueAsString(
-                                            decodedMessage.dps.data.parameters
-                                        )
-                                    }"
-                                )
+                        val decodedMessages =
+                            messageDecoder.decode(deviceId, ByteBuffer.wrap(Hex.decode(message)))
+                        decodedMessages.forEach { decodedMessage ->
+                            when (decodedMessage.messageSchemaType) {
+                                IpcRequestWrapper.SCHEMA_TYPE -> {
+                                    val ipcRequest = cast<MessageWrapper<IpcRequestWrapper>>(decodedMessage)
 
-                                if (decodedMessage.dps.data.security != null) {
-                                    requestMemory[decodedMessage.dps.data.requestId] = RequestData(
-                                        RequestMethod.valueOf(decodedMessage.dps.data.method.uppercase()),
-                                        Hex.decode(decodedMessage.dps.data.security!!.nonce)
-                                    )
-                                } else {
-                                    requestMemory[decodedMessage.dps.data.requestId] =
-                                        RequestData(RequestMethod.valueOf(decodedMessage.dps.data.method.uppercase()))
-                                }
-                            }
-
-                            is Protocol102Dps<*> -> {
-                                if (decodedMessage.result is Array<*> && (decodedMessage.result as Array<*>)[0] is GetPropGetStatusResponse) {
-                                    println(" <- ${decodedMessage.id} ${RequestMethod.GET_PROP.value} ${objectMapper.writeValueAsString(decodedMessage.result)}")
-                                } else if (decodedMessage.result is ArrayNode || decodedMessage.result is JsonNode) {
                                     println(
-                                        " <- ${decodedMessage.id} ${decodedMessage.method?.value} !!arbitrary!! ${
+                                        "->  ${ipcRequest.requestId} ${ipcRequest.payload.dps.data.method} ${
                                             objectMapper.writeValueAsString(
-                                                decodedMessage.result
+                                                ipcRequest.payload.dps.data.parameters
                                             )
                                         }"
                                     )
-                                } else {
-                                    println(" <- ${decodedMessage.id} ${objectMapper.writeValueAsString(decodedMessage.result)}")
+
+                                    if (ipcRequest.payload.dps.data.security != null) {
+                                        requestMemory[ipcRequest.payload.dps.data.requestId] = RequestData(
+                                            RequestMethod.valueOf(ipcRequest.payload.dps.data.method.uppercase()),
+                                            Hex.decode(ipcRequest.payload.dps.data.security!!.nonce)
+                                        )
+                                    } else {
+                                        requestMemory[ipcRequest.payload.dps.data.requestId] =
+                                            RequestData(RequestMethod.valueOf(ipcRequest.payload.dps.data.method.uppercase()))
+                                    }
+                                }
+
+                                IpcResponseWrapper.SCHEMA_TYPE -> {
+                                    val ipcResponse = cast<MessageWrapper<IpcResponseDps<*>>>(decodedMessage)
+
+                                    if (ipcResponse.payload.result is Array<*> && (ipcResponse.payload.result as Array<*>)[0] is GetPropGetStatusResponse) {
+                                        println(
+                                            " <- ${ipcResponse.payload.id} ${RequestMethod.GET_PROP.value} ${
+                                                objectMapper.writeValueAsString(
+                                                    ipcResponse.payload.result
+                                                )
+                                            }"
+                                        )
+                                    } else if (ipcResponse.payload.result is ArrayNode || ipcResponse.payload.result is JsonNode) {
+                                        println(
+                                            " <- ${ipcResponse.payload.id} ${ipcResponse.payload.method?.value} !!arbitrary!! ${
+                                                objectMapper.writeValueAsString(
+                                                    ipcResponse.payload.result
+                                                )
+                                            }"
+                                        )
+                                    } else {
+                                        println(" <- ${ipcResponse.payload.id} ${objectMapper.writeValueAsString(ipcResponse.payload.result)}")
+                                    }
+                                }
+
+                                Protocol301Wrapper.SCHEMA_TYPE -> {
+                                    val mapResponse = cast<MessageWrapper<Protocol301>>(decodedMessage)
+                                    println(" <- Map Data ${mapResponse.payload.payload.robotPosition?.toString()}")
+                                }
+
+                                else -> {
+                                    // must be status update
+                                    val statusUpdate = decodedMessage as StatusUpdate
+                                    println(" <- Status Update for value ${statusUpdate.messageSchemaType} = ${statusUpdate.value}")
                                 }
                             }
-
-                            is Response301 -> {
-                                // not much to do with the map data in a test
-                            }
-
-                            else -> {
-                                println("Unknown message type")
-                            }
                         }
+
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -129,10 +176,35 @@ class CaptureReader {
         val objectMapper = jacksonObjectMapper()
 
         @TestConfiguration
-        class ProvideJackson {
+        @EnableConfigurationProperties(CaptureReaderConfiguration::class)
+        class ProvideJackson(@Autowired val knownDevices: CaptureReaderConfiguration) {
             @Bean
             fun objectMapper(): ObjectMapper {
                 return objectMapper
+            }
+
+            @Bean
+            fun robotRepository(): RobotRepository {
+                val mock = Mockito.mock(RobotRepository::class.java)
+                Mockito.`when`(mock.getByDeviceId(Mockito.anyString())).then {
+                    val deviceId = it.arguments.first().toString()
+                    Optional.of(
+                        Robot(
+                            deviceId = deviceId,
+                            deviceKey = knownDevices.devices[deviceId]
+                                ?: throw RuntimeException("Must configure device $deviceId in properties"),
+                            state = emptyList(),
+                            serialNumber = "",
+                            model = "",
+                            firmwareVersion = "",
+                            productName = "",
+                            name = "",
+                            home = Home(homeId = 0, name = "")
+
+                        )
+                    )
+                }
+                return mock
             }
         }
 

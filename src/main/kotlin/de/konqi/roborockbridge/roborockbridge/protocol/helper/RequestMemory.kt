@@ -15,7 +15,7 @@ class RequestMemory :  LinkedHashMap<Int, RequestData>(MAX_MEMORY_SIZE) {
         return super.put(key, value)
     }
 
-    fun getAndDestroy(key: Int): RequestData? {
+    fun getAndRemove(key: Int): RequestData? {
         val value = super.get(key)
         if (value != null) {
             super.remove(key)

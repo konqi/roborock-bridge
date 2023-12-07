@@ -1,8 +1,8 @@
 package de.konqi.roborockbridge.roborockbridge.protocol.mqtt
 
 import com.fasterxml.jackson.databind.JsonNode
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.GetConsumableResponse
-import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.response.GetPropGetStatusResponse
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.response.GetConsumableResponse
+import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.response.GetPropGetStatusResponse
 import kotlin.reflect.KClass
 
 enum class RequestMethod(val value: String, val decodesTo: KClass<*> = JsonNode::class) {

@@ -62,31 +62,31 @@ class RoborockMqtt(
         thread.start()
     }
 
-    @PreDestroy
-    private fun onDestroy() {
-//        run.set(false)
-
-        disconnect()
-    }
-
     override fun run() {
-//        run.set(true)
-
         connect()
-//        while (run.get()) {}
     }
 
-    fun monitorDevice(deviceId: String) {
-        // start polling loop
+    @PreDestroy
+    private fun disconnect() {
+        mqttClient.unsubscribe(subscribeTopic)
+
+        if (mqttClient.isConnected) {
+            mqttClient.disconnect()
+        }
     }
+
+
+//    fun monitorDevice(deviceId: String) {
+//        // start polling loop
+//    }
 
     //    @Scheduled(fixedDelay = 10000)
-    fun pollStatus() {
+//    fun pollStatus() {
 //        deviceKeyMemory.keys.forEach { deviceId ->
 //            logger.debug("Polling $deviceId")
 //            publishRequest(deviceId, RequestMethod.GET_PROP, listOf("get_status"))
 //        }
-    }
+//    }
 
     private fun connect() {
         mqttClient = MqttClient(broker, clientId, persistence)
@@ -137,22 +137,11 @@ class RoborockMqtt(
     }
 
     fun handleMessage(deviceId: String, payload: ByteBuffer) {
-        robotRepository.getByDeviceId(deviceId).ifPresent { robot ->
-            val message = messageDecoder.decode(robot.deviceKey, payload)
-            if (message != null) {
-                if (!inboundMessagesQueue.offer(message)) {
-                    logger.warn("Discarded message due to backpressure")
-                }
+        val message = messageDecoder.decode(deviceId, payload)
+        if (message != null) {
+            if (!inboundMessagesQueue.offer(message)) {
+                logger.warn("Discarded message due to backpressure")
             }
-        }
-    }
-
-
-    private fun disconnect() {
-        mqttClient.unsubscribe(subscribeTopic)
-
-        if (mqttClient.isConnected) {
-            mqttClient.disconnect()
         }
     }
 
@@ -169,16 +158,17 @@ class RoborockMqtt(
             parameters = parameters
         ) else request101Factory.createRequest(method = method, key = robot.deviceKey)
         mqttClient.publish(topic, MqttMessage(message.bytes))
-        logger.info("Published  ${method.value} request via topic $topic")
+        logger.info("Published '${method.value}' request via topic '$topic'.")
         requestMemory[requestId.toInt()] = RequestData(method)
     }
 
     fun publishReturnToChargingStation(deviceId: String) {
         publishRequest(deviceId, RequestMethod.APP_CHARGE)
     }
-//    private fun publishStatusRequest(deviceId: String) {
-//        publishRequest(deviceId, RequestMethod.GET_PROP, listOf("get_status"))
-//    }
+
+    fun publishStatusRequest(deviceId: String) {
+        publishRequest(deviceId, RequestMethod.GET_PROP, listOf("get_status"))
+    }
 
 
     companion object {
