@@ -6,7 +6,7 @@ import java.nio.ByteOrder
 import java.security.MessageDigest
 
 class MapData(val data: ByteArray) {
-    val buffer = ByteBuffer.wrap(data).asReadOnlyBuffer().order(ByteOrder.LITTLE_ENDIAN).mark()
+    val buffer: ByteBuffer = ByteBuffer.wrap(data).asReadOnlyBuffer().order(ByteOrder.LITTLE_ENDIAN).mark()
 
     val preamble = String(ByteArray(2).apply { buffer.get(this) })
 

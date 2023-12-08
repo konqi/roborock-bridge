@@ -25,13 +25,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("com.h2database:h2:2.2.224")
-//    implementation("org.xerial:sqlite-jdbc:3.44.0.0")
-//    implementation("org.hibernate.orm:hibernate-community-dialects")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.3")
-//    implementation("com.hivemq:hivemq-mqtt-client:1.3.0")
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
-//    implementation("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 //    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -46,12 +42,4 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    // required for khttp
-    jvmArgs("--add-opens=java.base/java.util=ALL-UNNAMED")
-    jvmArgs("--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED")
-}
-
-tasks.bootRun {
-    jvmArgs("--add-opens=java.base/java.util=ALL-UNNAMED")
-    jvmArgs("--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED")
 }

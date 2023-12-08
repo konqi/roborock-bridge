@@ -5,7 +5,7 @@ import jakarta.persistence.Entity
 import jakarta.persistence.Id
 
 @Entity
-class Home(
+data class Home(
     @Id
     @Column(name = "home_id")
     var homeId: Int,

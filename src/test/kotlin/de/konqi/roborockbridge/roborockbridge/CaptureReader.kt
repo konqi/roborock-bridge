@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import de.konqi.roborockbridge.roborockbridge.persistence.RobotRepository
+import de.konqi.roborockbridge.roborockbridge.persistence.DeviceRepository
 import de.konqi.roborockbridge.roborockbridge.persistence.entity.Home
-import de.konqi.roborockbridge.roborockbridge.persistence.entity.Robot
+import de.konqi.roborockbridge.roborockbridge.persistence.entity.Device
 import de.konqi.roborockbridge.roborockbridge.protocol.MessageDecoder
 import de.konqi.roborockbridge.roborockbridge.protocol.MessageWrapper
 import de.konqi.roborockbridge.roborockbridge.protocol.StatusUpdate
@@ -184,12 +184,12 @@ class CaptureReader {
             }
 
             @Bean
-            fun robotRepository(): RobotRepository {
-                val mock = Mockito.mock(RobotRepository::class.java)
-                Mockito.`when`(mock.getByDeviceId(Mockito.anyString())).then {
+            fun robotRepository(): DeviceRepository {
+                val mock = Mockito.mock(DeviceRepository::class.java)
+                Mockito.`when`(mock.findById(Mockito.anyString())).then {
                     val deviceId = it.arguments.first().toString()
                     Optional.of(
-                        Robot(
+                        Device(
                             deviceId = deviceId,
                             deviceKey = knownDevices.devices[deviceId]
                                 ?: throw RuntimeException("Must configure device $deviceId in properties"),

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
-import de.konqi.roborockbridge.roborockbridge.persistence.RobotRepository
+import de.konqi.roborockbridge.roborockbridge.persistence.DeviceRepository
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.raw.EncryptedMessage
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
@@ -37,10 +37,10 @@ data class StatusUpdate(
 class MessageDecoder(
     @Autowired private val requestMemory: RequestMemory,
     @Autowired private val objectMapper: ObjectMapper,
-    private val robotRepository: RobotRepository
+    private val robotRepository: DeviceRepository
 ) {
     fun decode(deviceId: String, payload: ByteBuffer): List<DecodedMqttMessage> {
-        val robot = robotRepository.getByDeviceId(deviceId).orElseThrow {
+        val robot = robotRepository.findById(deviceId).orElseThrow {
             RuntimeException("Robot with deviceId '$deviceId' is unknown.")
         }
         val data = EncryptedMessage(robot.deviceKey, payload)

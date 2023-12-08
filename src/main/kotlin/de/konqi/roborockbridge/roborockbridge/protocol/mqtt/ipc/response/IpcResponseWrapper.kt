@@ -8,6 +8,7 @@ data class IpcResponseWrapper @JsonCreator constructor(
     val timestamp: UInt,
     val dps: Map<String, String>
 ) {
+    @JsonCreator
     constructor() : this(0u, emptyMap()) {}
 
     companion object {

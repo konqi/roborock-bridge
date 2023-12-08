@@ -1,8 +1,7 @@
 package de.konqi.roborockbridge.roborockbridge.protocol
 
-import de.konqi.roborockbridge.roborockbridge.Command
 import de.konqi.roborockbridge.roborockbridge.LoggerDelegate
-import de.konqi.roborockbridge.roborockbridge.persistence.RobotRepository
+import de.konqi.roborockbridge.roborockbridge.persistence.DeviceRepository
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.roborockbridge.protocol.mqtt.*
@@ -14,7 +13,6 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.nio.ByteBuffer
-import java.util.concurrent.atomic.AtomicBoolean
 
 @Component
 class RoborockMqtt(
@@ -22,7 +20,7 @@ class RoborockMqtt(
     @Autowired private val requestMemory: RequestMemory,
     @Autowired private val messageDecoder: MessageDecoder,
     @Autowired private val request101Factory: Request101Factory,
-    private val robotRepository: RobotRepository
+    private val robotRepository: DeviceRepository
 ) : Runnable {
     private val username: String
         get() = ProtocolUtils.calcHexMd5(
@@ -51,7 +49,7 @@ class RoborockMqtt(
 
     lateinit var thread: Thread
 
-    val inboundMessagesQueue = CircularConcurrentLinkedQueue<Any>(20)
+    val inboundMessagesQueue = CircularConcurrentLinkedQueue<DecodedMqttMessage>(20)
 
     @PostConstruct
     private fun init() {
@@ -74,19 +72,6 @@ class RoborockMqtt(
             mqttClient.disconnect()
         }
     }
-
-
-//    fun monitorDevice(deviceId: String) {
-//        // start polling loop
-//    }
-
-    //    @Scheduled(fixedDelay = 10000)
-//    fun pollStatus() {
-//        deviceKeyMemory.keys.forEach { deviceId ->
-//            logger.debug("Polling $deviceId")
-//            publishRequest(deviceId, RequestMethod.GET_PROP, listOf("get_status"))
-//        }
-//    }
 
     private fun connect() {
         mqttClient = MqttClient(broker, clientId, persistence)
@@ -137,17 +122,15 @@ class RoborockMqtt(
     }
 
     fun handleMessage(deviceId: String, payload: ByteBuffer) {
-        val message = messageDecoder.decode(deviceId, payload)
-        if (message != null) {
-            if (!inboundMessagesQueue.offer(message)) {
-                logger.warn("Discarded message due to backpressure")
-            }
+        val messages = messageDecoder.decode(deviceId, payload)
+        if(!inboundMessagesQueue.addAll(messages)) {
+            logger.warn("Discarded message due to backpressure")
         }
     }
 
     @Throws(RuntimeException::class)
     private fun publishRequest(deviceId: String, method: RequestMethod, parameters: List<String>? = null) {
-        val robot = robotRepository.getByDeviceId(deviceId).orElseThrow {
+        val robot = robotRepository.findById(deviceId).orElseThrow {
             RuntimeException("No key available for device $deviceId")
         }
 

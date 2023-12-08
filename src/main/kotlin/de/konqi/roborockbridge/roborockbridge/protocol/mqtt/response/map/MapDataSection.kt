@@ -53,7 +53,7 @@ class MapDataSection(buffer: ByteBuffer) {
     val headerLength: UShort get() = slice.getShort(2).toUShort()
     val bodyLength: UInt get() = slice.getInt(4).toUInt()
 
-    val header = slice.duplicate().limit(headerLength.toInt()).order(ByteOrder.LITTLE_ENDIAN)
-    val body = slice.duplicate().position(headerLength.toInt()).slice().order(ByteOrder.LITTLE_ENDIAN)
+    val header: ByteBuffer = slice.duplicate().limit(headerLength.toInt()).order(ByteOrder.LITTLE_ENDIAN)
+    val body: ByteBuffer = slice.duplicate().position(headerLength.toInt()).slice().order(ByteOrder.LITTLE_ENDIAN)
         .limit(bodyLength.toInt())
 }

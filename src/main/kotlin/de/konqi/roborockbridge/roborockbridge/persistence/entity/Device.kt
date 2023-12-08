@@ -4,14 +4,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
 
 @Entity
-@Table(uniqueConstraints = [UniqueConstraint(columnNames = ["home_id", "device_key"])])
-class Robot(
+@Table(uniqueConstraints = [UniqueConstraint(columnNames = ["home_id", "device_id"])])
+data class Device(
+    @Id
+    @Column(name = "device_id", nullable = false)
+    val deviceId: String,
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "home_id", nullable = false)
     val home: Home,
-    @Column(name = "device_id", nullable = false)
-    val deviceId: String,
     @Column(name = "device_key", nullable = false)
     val deviceKey: String,
     @Column(nullable = false)
@@ -24,10 +25,6 @@ class Robot(
     val firmwareVersion: String,
     @Column(nullable = false)
     val serialNumber: String,
-    @ElementCollection
-    val state: List<RobotState>,
-    @JsonIgnore
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    @OneToMany(mappedBy = "device", cascade = [CascadeType.REMOVE])
+    val state: List<DeviceState> = emptyList()
 )

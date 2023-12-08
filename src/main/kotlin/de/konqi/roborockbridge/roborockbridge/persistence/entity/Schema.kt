@@ -5,7 +5,7 @@ import jakarta.persistence.*
 
 @Entity
 @Table(uniqueConstraints = [UniqueConstraint(columnNames = ["home_id", "schema_id"])])
-class Schema(
+data class Schema(
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "home_id", nullable = false)

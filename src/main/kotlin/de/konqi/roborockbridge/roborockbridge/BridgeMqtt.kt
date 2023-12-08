@@ -2,7 +2,7 @@ package de.konqi.roborockbridge.roborockbridge
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.konqi.roborockbridge.roborockbridge.persistence.entity.Home
-import de.konqi.roborockbridge.roborockbridge.persistence.entity.Robot
+import de.konqi.roborockbridge.roborockbridge.persistence.entity.Device
 import de.konqi.roborockbridge.roborockbridge.persistence.entity.Room
 import de.konqi.roborockbridge.roborockbridge.persistence.entity.Schema
 import de.konqi.roborockbridge.roborockbridge.utility.CircularConcurrentLinkedQueue
@@ -222,7 +222,7 @@ class BridgeMqtt(
         mqttClient.publish(topic, payload, 0, true)
     }
 
-    fun announceDevice(robot: Robot) {
+    fun announceDevice(robot: Device) {
         logger.info("Announcing new robot with id '${robot.deviceId}'")
         val topic = getDeviceTopic(homeId = robot.home.homeId, deviceId = robot.deviceId)
         val payload = objectMapper.writeValueAsBytes(robot)
