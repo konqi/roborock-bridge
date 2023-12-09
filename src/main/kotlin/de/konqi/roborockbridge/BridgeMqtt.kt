@@ -2,7 +2,7 @@ package de.konqi.roborockbridge
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.treeToValue
-import de.konqi.roborockbridge.persistence.entity.Device
+import de.konqi.roborockbridge.bridge.DeviceForPublish
 import de.konqi.roborockbridge.persistence.entity.Home
 import de.konqi.roborockbridge.persistence.entity.Room
 import de.konqi.roborockbridge.persistence.entity.Schema
@@ -239,10 +239,10 @@ class BridgeMqtt(
         mqttClient.publish(topic, payload, 0, true)
     }
 
-    fun announceDevice(robot: Device) {
-        logger.info("Announcing new robot with id '${robot.deviceId}'")
-        val topic = getDeviceTopic(homeId = robot.home.homeId, deviceId = robot.deviceId)
-        val payload = objectMapper.writeValueAsBytes(robot)
+    fun announceDevice(device: DeviceForPublish) {
+        logger.info("Announcing new robot with id '${device.deviceId}'")
+        val topic = getDeviceTopic(homeId = device.homeId, deviceId = device.deviceId)
+        val payload = objectMapper.writeValueAsBytes(device)
         mqttClient.publish(
             topic, payload, 0, true
         )

@@ -25,6 +25,6 @@ data class Device(
     val firmwareVersion: String,
     @Column(nullable = false)
     val serialNumber: String,
-    @OneToMany(mappedBy = "device", cascade = [CascadeType.REMOVE])
+    @OneToMany(mappedBy = "device", cascade = [CascadeType.REMOVE], fetch = FetchType.EAGER)
     val state: List<DeviceState> = emptyList()
 )

@@ -1,9 +1,11 @@
 package de.konqi.roborockbridge
 
+import de.konqi.roborockbridge.bridge.DeviceForPublish
 import de.konqi.roborockbridge.persistence.*
 import de.konqi.roborockbridge.protocol.RoborockCredentials
 import de.konqi.roborockbridge.protocol.RoborockMqtt
 import de.konqi.roborockbridge.protocol.StatusUpdate
+import de.konqi.roborockbridge.bridge.S8UltraInterpreter
 import de.konqi.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
 import de.konqi.roborockbridge.protocol.mqtt.ipc.response.IpcResponseWrapper
 import de.konqi.roborockbridge.protocol.mqtt.response.Protocol301Wrapper
@@ -15,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
+
 
 @Service
 //@Profile("off")
@@ -47,7 +50,12 @@ class BridgeService(
 
         // announce devices on mqtt broker
         bridgeMqtt.announceHome(homeEntity)
-        robots.forEach(bridgeMqtt::announceDevice)
+        robots.map {
+            DeviceForPublish.fromDeviceEntity(
+                it, /* TODO: Select correct interpreter */
+                S8UltraInterpreter()
+            )
+        }.forEach(bridgeMqtt::announceDevice)
         bridgeMqtt.announceRooms(rooms.toList())
 
         val schemasFromRoborock = userApi.getCleanupSchemas(homeEntity.homeId)
@@ -55,7 +63,6 @@ class BridgeService(
             dataAccessLayer.saveSchemas(schemasFromRoborock, homeEntity)
         bridgeMqtt.announceSchemas(schemas.toList())
     }
-
 
     @EventListener(ApplicationReadyEvent::class)
     fun worker() {
@@ -73,6 +80,15 @@ class BridgeService(
         }
     }
 
+    private fun publishDeviceStatus(deviceId: String) {
+        val device = dataAccessLayer.getDevice(deviceId)
+        device.ifPresent {
+            // TODO select correct interpreter
+            val interpreter = S8UltraInterpreter()
+            bridgeMqtt.announceDevice(DeviceForPublish.fromDeviceEntity(it, interpreter))
+        }
+    }
+
     private fun roborockMqttProcessingLoop() {
         while (roborockMqtt.inboundMessagesQueue.size > 0) {
             val message = roborockMqtt.inboundMessagesQueue.remove()
@@ -87,7 +103,8 @@ class BridgeService(
                     dataAccessLayer.updateDeviceState(message.deviceId, property, value)
                     logger.debug("Status of '$property' is now '$value' for device ${message.deviceId}.")
 
-                    // TODO notify
+                    // notify
+                    publishDeviceStatus(message.deviceId)
                 }
             }
         }

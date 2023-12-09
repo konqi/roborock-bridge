@@ -62,18 +62,18 @@ class DataAccessLayer(
             )
 
             val states = deviceStateRepository.saveAll(
-                device.deviceStatus.map { newState ->
-                    val protocolInfo = product.schema.find { it.id.toInt() == newState.key }
-                        ?: throw RuntimeException("Unable to resolve state meta data")
-
+                product.schema.filter {
+                    // ignore ipc request and response
+                    it.id.toInt() > 102
+                } .map {
                     DeviceState(
                         device = newDevice,
-                        schemaId = newState.key,
-                        code = protocolInfo.code,
-                        value = newState.value,
-                        mode = ProtocolMode.valueOf(protocolInfo.mode.uppercase()),
-                        property = protocolInfo.property,
-                        type = protocolInfo.type
+                        schemaId = it.id.toInt(),
+                        code = it.code,
+                        mode = ProtocolMode.valueOf(it.mode.uppercase()),
+                        type = it.type,
+                        property = it.property,
+                        value = device.deviceStatus[it.id.toInt()] ?: -1
                     )
                 }
             )
