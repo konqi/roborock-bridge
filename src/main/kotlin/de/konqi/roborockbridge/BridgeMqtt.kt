@@ -3,6 +3,7 @@ package de.konqi.roborockbridge
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.treeToValue
 import de.konqi.roborockbridge.bridge.DeviceForPublish
+import de.konqi.roborockbridge.bridge.MapDataForPublish
 import de.konqi.roborockbridge.persistence.entity.Home
 import de.konqi.roborockbridge.persistence.entity.Room
 import de.konqi.roborockbridge.persistence.entity.Schema
@@ -20,11 +21,11 @@ import org.springframework.stereotype.Component
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
-enum class CommandType(val id: String) {
+enum class CommandType(val value: String) {
     GET("get"), SET("set"), ACTION("action");
 
     companion object {
-        private val mapping = CommandType.entries.associateBy(CommandType::id)
+        private val mapping = CommandType.entries.associateBy(CommandType::value)
         fun fromValue(value: String) = CommandType.mapping[value]
     }
 }
@@ -142,7 +143,7 @@ class BridgeMqtt(
 
     fun handleMessage(topic: String, message: MqttMessage) {
         if(!CommandType.entries.any {
-            topic.endsWith(it.name)
+            topic.endsWith(it.value)
         }) {
             logger.debug("Topic '$topic' is not a command, ignoring it.")
             return
@@ -267,6 +268,11 @@ class BridgeMqtt(
     fun publishVolatile(homeId: Int, deviceId: String, property: String, payload: ByteArray) {
         val topic = getPropertyTopic(homeId, deviceId, property)
         mqttClient.publish(topic, payload, 0, false)
+    }
+
+    fun publishMapData(homeId: Int, deviceId: String, payload: MapDataForPublish) {
+        val topic = getPropertyTopic(homeId, deviceId, "map")
+        mqttClient.publish(topic, objectMapper.writeValueAsBytes(payload), 0, false)
     }
 
 

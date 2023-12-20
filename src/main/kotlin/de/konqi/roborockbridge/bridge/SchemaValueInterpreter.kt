@@ -2,6 +2,7 @@ package de.konqi.roborockbridge.bridge
 
 interface SchemaValueInterpreter {
     fun interpret(schemaId: Int, value: Int): String
+    fun getOptions(schemaId: Int): Map<Int, String>
 }
 
 class S8UltraInterpreter : SchemaValueInterpreter {
@@ -23,6 +24,16 @@ class S8UltraInterpreter : SchemaValueInterpreter {
             else -> null
 
         } ?: "$value 🤷"
+    }
+
+    override fun getOptions(schemaId: Int): Map<Int, String> {
+        return when(schemaId) {
+            120 -> ERROR_CODE_120
+            121 -> DEVICE_STATES_101
+            123 -> FAN_POWER_123
+            124 -> WATER_BOX_124
+            else -> emptyMap()
+        }
     }
 
     companion object {
@@ -79,6 +90,7 @@ class S8UltraInterpreter : SchemaValueInterpreter {
             22 to "Charge sensor problem",
             23 to "Dock problem",
             24 to "No-go zone or invisible wall detected",
+            39 to "Waste water tank missing",
             254 to "Bin full",
             255 to "Internal error",
         )

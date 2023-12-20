@@ -1,5 +1,6 @@
 HELP.md
 .gradle
+captures/**/*
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -9,9 +10,6 @@ build/
 src/**/resources/application-*.*
 # credential store
 /auth.json
-/home-detail.json
-/robots.json
-/user-home.json
 
 ### STS ###
 .apt_generated

@@ -29,6 +29,7 @@ class RoborockMqtt(
                 roborockCredentials.mqttKey
             ).joinToString(":")
         ).substring(2, 10)
+
     private val password: String
         get() = ProtocolUtils.calcHexMd5(
             arrayOf(
@@ -37,6 +38,14 @@ class RoborockMqtt(
             ).joinToString(":")
         ).substring(16)
     private val broker: String get() = roborockCredentials.mqttServer!!
+
+    private val mqttConnectOptions
+        get() = MqttConnectOptions().also {
+            it.keepAliveInterval = 60
+            it.isCleanSession = true
+            it.userName = username
+            it.password = password.toCharArray()
+        }
 
     // maybe store clientId somewhere or generate a static string e.g. MD5(username)
     private val clientId = "${ProtocolUtils.CLIENT_ID_SHORT}_${ProtocolUtils.generateNonce()}"
@@ -62,6 +71,7 @@ class RoborockMqtt(
 
     override fun run() {
         connect()
+        subscribe()
     }
 
     @PreDestroy
@@ -74,32 +84,23 @@ class RoborockMqtt(
     }
 
     private fun connect() {
-        mqttClient = MqttClient(broker, clientId, persistence)
+        mqttClient = MqttClient(broker, clientId, persistence).apply {
+            setCallback(object : MqttCallback {
+                override fun connectionLost(cause: Throwable?) {
+                    logger.warn("Connection lost")
+                }
 
-        val connectionOptions = MqttConnectOptions().also {
-            it.keepAliveInterval = 60
-            it.isCleanSession = true
-            it.userName = username
-            it.password = password.toCharArray()
+                override fun messageArrived(topic: String?, message: MqttMessage?) {
+                    logger.debug("New message for topic '$topic'")
+                }
+
+                override fun deliveryComplete(token: IMqttDeliveryToken?) {
+                    logger.debug("Message delivered")
+                }
+            })
         }
-        mqttClient.setCallback(object : MqttCallback {
-            override fun connectionLost(cause: Throwable?) {
-                logger.warn("Connection lost")
-            }
 
-            override fun messageArrived(topic: String?, message: MqttMessage?) {
-                logger.info("New message for topic '$topic'")
-            }
-
-            override fun deliveryComplete(token: IMqttDeliveryToken?) {
-                logger.warn("Message delivered")
-            }
-
-        })
-
-        mqttClient.connect(connectionOptions)
-
-        subscribe()
+        mqttClient.connect(mqttConnectOptions)
     }
 
     private fun subscribe() {
@@ -123,13 +124,18 @@ class RoborockMqtt(
 
     fun handleMessage(deviceId: String, payload: ByteBuffer) {
         val messages = messageDecoder.decode(deviceId, payload)
-        if(!inboundMessagesQueue.addAll(messages)) {
+        if (!inboundMessagesQueue.addAll(messages)) {
             logger.warn("Discarded message due to backpressure")
         }
     }
 
     @Throws(RuntimeException::class)
-    private fun publishRequest(deviceId: String, method: RequestMethod, parameters: List<String>? = null) {
+    fun publishRequest(
+        deviceId: String,
+        method: RequestMethod,
+        parameters: List<String>? = null,
+        secure: Boolean = false
+    ) {
         val robot = robotRepository.findById(deviceId).orElseThrow {
             RuntimeException("No key available for device $deviceId")
         }
@@ -138,21 +144,26 @@ class RoborockMqtt(
         val (requestId, message) = if (parameters != null) request101Factory.createRequest(
             method = method,
             key = robot.deviceKey,
-            parameters = parameters
-        ) else request101Factory.createRequest(method = method, key = robot.deviceKey)
+            parameters = parameters,
+            secure = secure
+        ) else request101Factory.createRequest(method = method, key = robot.deviceKey, secure = secure)
         mqttClient.publish(topic, MqttMessage(message.bytes))
         logger.info("Published '${method.value}' request via topic '$topic'.")
-        requestMemory[requestId.toInt()] = RequestData(method)
-    }
-
-    fun publishReturnToChargingStation(deviceId: String) {
-        publishRequest(deviceId, RequestMethod.APP_CHARGE)
+        requestMemory.put(
+            requestId.toInt(), RequestData(
+                method = method,
+                nonce = if (secure) request101Factory.generateNonce(requestId) else null
+            )
+        )
     }
 
     fun publishStatusRequest(deviceId: String) {
-        publishRequest(deviceId, RequestMethod.GET_PROP, listOf("get_status"))
+        publishRequest(deviceId = deviceId, method = RequestMethod.GET_PROP, parameters = listOf("get_status"))
     }
 
+    fun publishMapRequest(deviceId: String) {
+        publishRequest(deviceId = deviceId, method = RequestMethod.GET_MAP_V1, secure = true)
+    }
 
     companion object {
         private val logger by LoggerDelegate()

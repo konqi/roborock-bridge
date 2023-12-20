@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 data class Request101(
     val requestId: UShort,
-    val message: EncryptedMessage,
+    val message: EncryptedMessage
 )
 
 @Component

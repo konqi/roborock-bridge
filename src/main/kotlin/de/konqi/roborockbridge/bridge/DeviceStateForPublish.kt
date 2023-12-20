@@ -6,7 +6,8 @@ data class DeviceStateForPublish(
     val schema: Int,
     val code: String,
     val value: String,
-    val rawValue: Int
+    val rawValue: Int,
+    val possibleValues: Map<Int, String>
 ) {
     companion object {
         fun fromDeviceStateEntity(
@@ -16,6 +17,7 @@ data class DeviceStateForPublish(
             schema = deviceState.schemaId,
             code = deviceState.code,
             value = interpreter.interpret(schemaId = deviceState.schemaId, value = deviceState.value),
+            possibleValues = interpreter.getOptions(schemaId = deviceState.schemaId),
             rawValue = deviceState.value,
         )
     }

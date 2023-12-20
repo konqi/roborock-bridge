@@ -1,10 +1,11 @@
-package de.konqi.roborockbridge.protocol
+package de.konqi.roborockbridge.protocol.mqtt
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.konqi.roborockbridge.LoggerDelegate
 import de.konqi.roborockbridge.persistence.DeviceRepository
+import de.konqi.roborockbridge.protocol.ProtocolUtils
 import de.konqi.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.protocol.mqtt.raw.EncryptedMessage
 import de.konqi.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
@@ -49,8 +50,7 @@ class MessageDecoder(
         }
 
         val protocol = "${data.header.protocol}"
-        logger.debug("Protocol ${protocol}, message: ${String(data.payload)}")
-
+        logger.trace("Protocol ${protocol}, message: ${String(data.payload)}")
 
         return when (protocol.toInt()) {
             // ability to handle 101 requests is only required to decode mqtt traffic captures
@@ -69,7 +69,8 @@ class MessageDecoder(
             IpcResponseWrapper.SCHEMA_TYPE -> {
                 val messages = readIpcResponse(data)
                 messages.map { (proto, payload) ->
-                    if (proto == 102) {
+                    // check if ipc response
+                    if (proto == IpcResponseWrapper.SCHEMA_TYPE) {
                         payload as IpcResponseDps<*>
                         MessageWrapper(
                             deviceId = deviceId,
@@ -84,12 +85,12 @@ class MessageDecoder(
                 }
             }
 
-            Protocol301Wrapper.SCHEMA_TYPE -> {
+            MapDataWrapper.SCHEMA_TYPE -> {
                 val message = readProtocol301Body(data)
                 listOf(
                     MessageWrapper(
                         deviceId = deviceId,
-                        messageSchemaType = Protocol301Wrapper.SCHEMA_TYPE,
+                        messageSchemaType = MapDataWrapper.SCHEMA_TYPE,
                         requestId = message.id.toInt(),
                         payload = message
                     )
@@ -128,15 +129,16 @@ class MessageDecoder(
             // Reed as generic Json, because we need the request id to match the correct response object
             val protocol102Dps: IpcResponseDps<JsonNode> = objectMapper.readValue(body)
             // the id matches the request, the request determines the response object
-            val requestData = requestMemory[protocol102Dps.id]
+            val requestData = requestMemory.get(protocol102Dps.id)
 
             if (requestData != null) {
                 // for map requests we get two responses, one with a confirmation of the request (proto 102) and map data (proto 301)
+                // TODO: Refactor request memory, since it only needs to contain the nonce for decoding captures
                 if (requestData.nonce == null) {
-                    logger.info("Received response to request ${protocol102Dps.id} with method '${protocol102Dps.method}'.")
+                    logger.info("Received response to request ${protocol102Dps.id} with method '${requestData.method}'.")
                     requestMemory.remove(protocol102Dps.id)
                 } else {
-                    logger.info("Request ${protocol102Dps.id} with method '${protocol102Dps.method}' was confirmed via IPS Response.")
+                    logger.info("Request ${protocol102Dps.id} with method '${requestData.method}' was confirmed via IPC Response.")
                 }
 
                 // return fully parsed payload

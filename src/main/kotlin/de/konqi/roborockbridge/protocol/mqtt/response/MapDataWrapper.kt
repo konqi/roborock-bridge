@@ -8,7 +8,7 @@ import javax.crypto.CipherInputStream
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-abstract class Protocol301Wrapper<T>(
+abstract class MapDataWrapper<T>(
     val endpoint: String,
     val id: UShort,
     val payload: T
@@ -18,13 +18,13 @@ abstract class Protocol301Wrapper<T>(
     }
 }
 
-class Protocol301(binary: Protocol301Binary, key: ByteArray) : Protocol301Wrapper<Protocol301Payload>(binary.endpoint, binary.id,
+class Protocol301(binary: Protocol301Binary, key: ByteArray) : MapDataWrapper<MapDataPayload>(binary.endpoint, binary.id,
     payload = decryptAndDecode(binary.payload, key)
 ) {
     companion object {
         private const val CIPHER = "AES/CBC/PKCS5Padding"
 
-        private fun decryptAndDecode(encrypted: ByteArray, key: ByteArray): Protocol301Payload {
+        private fun decryptAndDecode(encrypted: ByteArray, key: ByteArray): MapDataPayload {
             val iv = IvParameterSpec(ByteArray(16) { 0 })
             val cipher = Cipher.getInstance(CIPHER).also {
                 it.init(
@@ -37,12 +37,12 @@ class Protocol301(binary: Protocol301Binary, key: ByteArray) : Protocol301Wrappe
                 GZIPInputStream(inputStream).readBytes()
             }
 
-            return Protocol301Payload.fromRawBytes(decryptedBytes)
+            return MapDataPayload.fromRawBytes(decryptedBytes)
         }
     }
 }
 
-class Protocol301Binary(endpoint: String, id: UShort, payload: ByteArray) : Protocol301Wrapper<ByteArray>(
+class Protocol301Binary(endpoint: String, id: UShort, payload: ByteArray) : MapDataWrapper<ByteArray>(
     endpoint, id,
     payload
 ) {

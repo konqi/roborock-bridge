@@ -1,0 +1,83 @@
+# Decoding the protocol
+
+This document describes how to break and enter the decoded stream of data between the roborock app and roborock servers.
+Following this guide you will be able to find slight variations in the protocol and thus suggest changes to the
+implementation that add compatibility for your device.
+
+## What you will need
+
+- a rooted android device (don't worry, a virtual one is fine)
+- [mitmproxy](https://mitmproxy.org/)
+- [wireshark](https://www.wireshark.org/)
+
+## Getting a rooted virtual android device
+
+- Install Android Studio
+- Start the Android Device Manager \
+  This is somewhat hidden on the start screen of android studio, hit the ⠇ in the top right corner and select Virtual
+  Device Manager
+- Create an android virtual device (AVD)
+- Root the AVD with [rootAVD](https://gitlab.com/newbit/rootAVD) \
+  This will also install Magisk, which we will use later on.
+
+## Install the Roborock app on the virtual device
+
+You can get the android app from many places, some more shady than others.
+I simply downloaded the app from my actual phone using
+
+    ./adb -e shell pm list packages
+
+and then
+
+    ./adb pull <path from list packages command> <path to where you want the apk locally>
+
+With the apk on your local device, you can simply drag and drop it onto the running emulated device.
+
+Off course, to do this you have enable developer mode on your android phone and connect it.
+If that seems too much trouble, or you simply don't have an android device, I suggest you create a virtual android
+device with Play Store enabled.
+You'll have to log into a Google Account on the virtual device, but that might be the most convenient way to do it.
+
+## Install wireguard on the android device
+
+Install wireguard on the android device, you have two good options:
+
+- If you have the Play Store installed and configured, simply use that
+- You can download the apk directly from [wireguard](https://www.wireguard.com/install/) and drag & drop it on your
+  device
+
+## Setup mitmproxy
+
+TODO: Improve
+
+- get wireguard config onto phone (qr code method via mitmweb) or file method
+- apply Magisk module via (http://mitm.it/),
+  see https://docs.mitmproxy.org/stable/howto-install-system-trusted-ca-android/#instructions-when-using-magisk
+
+Run mitmdump and have it log its ssl keys, with:
+
+    SSLKEYLOGFILE="$PWD/sslkeylogfile.txt" mitmdump --mode wireguard
+
+See: https://docs.mitmproxy.org/stable/howto-wireshark-tls/
+
+## The actual sniffing
+
+Start Wireshark.
+In `Settings` -> `Protocols` -> `TLS`, select the file created above as `(Pre)-Master-Secret log filename`.
+Start to capture on your default network interface (the one you're connected to the internet with).
+
+Start the Roborock app on the android device.
+
+If you're interested in the mqtt protocol you can apply a filter as:
+
+    mqtt.msgtype == 3
+
+If you're interested in the Roborock REST api, I recommend to filter for
+
+    http or http2
+
+If there is still too much going on, add more filters with ip-addresses.
+
+## Exporting
+
+## Decryption

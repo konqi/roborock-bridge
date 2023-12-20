@@ -1,17 +1,22 @@
 package de.konqi.roborockbridge
 
 import de.konqi.roborockbridge.bridge.DeviceForPublish
+import de.konqi.roborockbridge.bridge.MapDataForPublish
 import de.konqi.roborockbridge.persistence.*
 import de.konqi.roborockbridge.protocol.RoborockCredentials
 import de.konqi.roborockbridge.protocol.RoborockMqtt
-import de.konqi.roborockbridge.protocol.StatusUpdate
+import de.konqi.roborockbridge.protocol.mqtt.StatusUpdate
 import de.konqi.roborockbridge.bridge.S8UltraInterpreter
+import de.konqi.roborockbridge.protocol.mqtt.MessageWrapper
+import de.konqi.roborockbridge.protocol.mqtt.RequestMethod
 import de.konqi.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
 import de.konqi.roborockbridge.protocol.mqtt.ipc.response.IpcResponseWrapper
-import de.konqi.roborockbridge.protocol.mqtt.response.Protocol301Wrapper
+import de.konqi.roborockbridge.protocol.mqtt.response.Protocol301
+import de.konqi.roborockbridge.protocol.mqtt.response.MapDataWrapper
 import de.konqi.roborockbridge.protocol.rest.HomeApi
 import de.konqi.roborockbridge.protocol.rest.LoginApi
 import de.konqi.roborockbridge.protocol.rest.UserApi
+import de.konqi.roborockbridge.utility.cast
 import jakarta.annotation.PreDestroy
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.event.ApplicationReadyEvent
@@ -62,6 +67,8 @@ class BridgeService(
         val schemas =
             dataAccessLayer.saveSchemas(schemasFromRoborock, homeEntity)
         bridgeMqtt.announceSchemas(schemas.toList())
+
+        // logger.info("roborock://mqtt-eu-3.roborock.com:8883?u=${roborockCredentials.userId}&s=${roborockCredentials.sessionId}&k=${roborockCredentials.mqttKey}&did=${robots.first().deviceId}&key=${robots.first().deviceKey}&pin=1234")
     }
 
     @EventListener(ApplicationReadyEvent::class)
@@ -93,9 +100,21 @@ class BridgeService(
         while (roborockMqtt.inboundMessagesQueue.size > 0) {
             val message = roborockMqtt.inboundMessagesQueue.remove()
             when (message.messageSchemaType) {
-                IpcRequestWrapper.SCHEMA_TYPE -> {}
+                IpcRequestWrapper.SCHEMA_TYPE -> { /* We should not receive requests */}
                 IpcResponseWrapper.SCHEMA_TYPE -> {}
-                Protocol301Wrapper.SCHEMA_TYPE -> {}
+                MapDataWrapper.SCHEMA_TYPE -> {
+                    val payload = cast<MessageWrapper<Protocol301>>(message).payload
+
+                    val homeId = dataAccessLayer.getDevice(message.deviceId).get().home.homeId
+                    val mapData = MapDataForPublish(map = payload.payload.map?.getImageDataUrl(),
+                        robotPosition = payload.payload.robotPosition,
+                        chargerPosition = payload.payload.chargerPosition,
+                        gotoPath = payload.payload.gotoPath?.points,
+                        path = payload.payload.path?.points,
+                        predictedPath = payload.payload.predictedPath?.points)
+                    bridgeMqtt.publishMapData(homeId = homeId, deviceId = message.deviceId, mapData)
+                }
+
                 else -> {
                     message as StatusUpdate
                     val property = message.messageSchemaType
@@ -114,19 +133,19 @@ class BridgeService(
         while (bridgeMqtt.inboundMessagesQueue.size > 0) {
             when (val command = bridgeMqtt.inboundMessagesQueue.remove()) {
                 is ActionCommand -> {
-                    if (command.action == de.konqi.roborockbridge.ActionEnum.HOME &&
+                    if (command.action == ActionEnum.HOME &&
                         command.target.type == TargetType.DEVICE &&
                         !command.target.identifier.isNullOrBlank()
                     ) {
-                        logger.info("Sending device '${command.target.identifier}' home.")
-                        roborockMqtt.publishReturnToChargingStation(command.target.identifier)
-                    } else if (command.action == de.konqi.roborockbridge.ActionEnum.START_SCHEMA &&
+                        logger.info("Requesting device '${command.target.identifier}' to return to dock via mqtt.")
+                        roborockMqtt.publishRequest(command.target.identifier, RequestMethod.APP_CHARGE)
+                    } else if (command.action == ActionEnum.START_SCHEMA &&
                         command.target.type == TargetType.DEVICE &&
                         !command.target.identifier.isNullOrBlank()
                     ) {
                         val schemaId = command.arguments["schemaId"]?.toInt()
                         if (schemaId != null) {
-                            logger.info("Starting cleanup schema with id '$schemaId'.")
+                            logger.info("Requesting '$schemaId' schema cleanup via rest api.")
                             userApi.startCleanupSchema(schemaId)
                         } else {
                             logger.warn("Command is missing argument 'schemaId'.")
@@ -137,11 +156,16 @@ class BridgeService(
                 }
 
                 is GetCommand -> {
-                    if (command.target.type == TargetType.DEVICE && !command.target.identifier.isNullOrEmpty() && command.parameters.first() == "status") {
-                        logger.info("Say please, or I won't GET stuff for ${command.target.type} ${command.target.identifier}")
-                        roborockMqtt.publishStatusRequest(command.target.identifier)
+                    if (command.target.type == TargetType.DEVICE && !command.target.identifier.isNullOrEmpty()) {
+                        if (command.parameters.first() == "status") {
+                            logger.info("Requesting device state refresh via mqtt.")
+                            roborockMqtt.publishStatusRequest(command.target.identifier)
+                        } else if (command.parameters.first() == "map") {
+                            logger.info("Requesting device map via mqtt.")
+                            roborockMqtt.publishMapRequest(command.target.identifier)
+                        }
                     } else if (command.target.type == TargetType.HOME && !command.target.identifier.isNullOrEmpty()) {
-                        logger.info("Refreshing home details via rest api")
+                        logger.info("Refreshing home details via rest api.")
                         init()
                     } else {
                         logger.warn(

@@ -6,11 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.konqi.roborockbridge.persistence.DeviceRepository
-import de.konqi.roborockbridge.persistence.entity.Home
 import de.konqi.roborockbridge.persistence.entity.Device
-import de.konqi.roborockbridge.protocol.MessageDecoder
-import de.konqi.roborockbridge.protocol.MessageWrapper
-import de.konqi.roborockbridge.protocol.StatusUpdate
+import de.konqi.roborockbridge.persistence.entity.Home
+import de.konqi.roborockbridge.protocol.mqtt.MessageDecoder
+import de.konqi.roborockbridge.protocol.mqtt.MessageWrapper
+import de.konqi.roborockbridge.protocol.mqtt.StatusUpdate
 import de.konqi.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.protocol.mqtt.RequestMethod
@@ -19,7 +19,7 @@ import de.konqi.roborockbridge.protocol.mqtt.ipc.response.GetPropGetStatusRespon
 import de.konqi.roborockbridge.protocol.mqtt.ipc.response.IpcResponseDps
 import de.konqi.roborockbridge.protocol.mqtt.ipc.response.IpcResponseWrapper
 import de.konqi.roborockbridge.protocol.mqtt.response.Protocol301
-import de.konqi.roborockbridge.protocol.mqtt.response.Protocol301Wrapper
+import de.konqi.roborockbridge.protocol.mqtt.response.MapDataWrapper
 import de.konqi.roborockbridge.utility.cast
 import org.junit.jupiter.api.*
 import org.mockito.Mockito
@@ -40,8 +40,8 @@ import java.util.*
 @ConfigurationProperties(prefix = "capture-reader")
 data class CaptureReaderConfiguration(
     val devices: Map<String, String>,
-    val wiresharkExport: String = "simple.json",
-    val csvFile: String = "simple.csv"
+    val wiresharkExport: String = "captures/simple.json",
+    val csvFile: String = "captures/simple.csv"
 )
 
 /**
@@ -116,13 +116,17 @@ class CaptureReader {
                                     )
 
                                     if (ipcRequest.payload.dps.data.security != null) {
-                                        requestMemory[ipcRequest.payload.dps.data.requestId] = RequestData(
-                                            RequestMethod.valueOf(ipcRequest.payload.dps.data.method.uppercase()),
-                                            Hex.decode(ipcRequest.payload.dps.data.security!!.nonce)
+                                        requestMemory.put(
+                                            ipcRequest.payload.dps.data.requestId, RequestData(
+                                                RequestMethod.valueOf(ipcRequest.payload.dps.data.method.uppercase()),
+                                                Hex.decode(ipcRequest.payload.dps.data.security!!.nonce)
+                                            )
                                         )
                                     } else {
-                                        requestMemory[ipcRequest.payload.dps.data.requestId] =
+                                        requestMemory.put(
+                                            ipcRequest.payload.dps.data.requestId,
                                             RequestData(RequestMethod.valueOf(ipcRequest.payload.dps.data.method.uppercase()))
+                                        )
                                     }
                                 }
 
@@ -146,12 +150,22 @@ class CaptureReader {
                                             }"
                                         )
                                     } else {
-                                        println(" <- ${ipcResponse.payload.id} ${objectMapper.writeValueAsString(ipcResponse.payload.result)}")
+                                        println(
+                                            " <- ${ipcResponse.payload.id} ${
+                                                objectMapper.writeValueAsString(
+                                                    ipcResponse.payload.result
+                                                )
+                                            }"
+                                        )
                                     }
                                 }
 
-                                Protocol301Wrapper.SCHEMA_TYPE -> {
+                                MapDataWrapper.SCHEMA_TYPE -> {
                                     val mapResponse = cast<MessageWrapper<Protocol301>>(decodedMessage)
+                                    if (mapResponse.payload.payload.map != null) {
+                                        val base64Url = mapResponse.payload.payload.map!!.getImageDataUrl()
+                                        println(" <- Image Url: $base64Url")
+                                    }
                                     println(" <- Map Data ${mapResponse.payload.payload.robotPosition?.toString()}")
                                 }
 

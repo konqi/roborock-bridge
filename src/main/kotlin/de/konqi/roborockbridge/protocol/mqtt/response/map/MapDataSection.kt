@@ -45,15 +45,32 @@ enum class SectionType(val id: UShort) {
     }
 }
 
-class MapDataSection(buffer: ByteBuffer) {
-    val slice: ByteBuffer = buffer.slice().order(ByteOrder.LITTLE_ENDIAN)
+data class MapDataSection(
+    val typeNumber: UShort,
+    val type: SectionType?,
+    val headerLength: UShort,
+    val bodyLength: UInt,
+    val header: ByteBuffer,
+    val body: ByteBuffer
+) {
 
-    val typeNumber: UShort get() = slice.getShort(0).toUShort()
-    val type: SectionType? get() = SectionType.fromValue(typeNumber)
-    val headerLength: UShort get() = slice.getShort(2).toUShort()
-    val bodyLength: UInt get() = slice.getInt(4).toUInt()
+    companion object {
+        fun fromRaw(buffer: ByteBuffer): MapDataSection {
+            val slice: ByteBuffer = buffer.slice().order(ByteOrder.LITTLE_ENDIAN)
 
-    val header: ByteBuffer = slice.duplicate().limit(headerLength.toInt()).order(ByteOrder.LITTLE_ENDIAN)
-    val body: ByteBuffer = slice.duplicate().position(headerLength.toInt()).slice().order(ByteOrder.LITTLE_ENDIAN)
-        .limit(bodyLength.toInt())
+            val typeNumber: UShort = slice.getShort(0).toUShort()
+            val headerLength: UShort = slice.getShort(2).toUShort()
+            val bodyLength: UInt = slice.getInt(4).toUInt()
+
+            return MapDataSection(
+                typeNumber = typeNumber,
+                type = SectionType.fromValue(typeNumber),
+                headerLength = headerLength,
+                bodyLength = bodyLength,
+                header = slice.duplicate().limit(headerLength.toInt()).order(ByteOrder.LITTLE_ENDIAN),
+                body = slice.duplicate().position(headerLength.toInt()).slice().order(ByteOrder.LITTLE_ENDIAN)
+                    .limit(bodyLength.toInt())
+            )
+        }
+    }
 }
