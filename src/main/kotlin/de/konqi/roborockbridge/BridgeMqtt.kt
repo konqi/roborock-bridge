@@ -16,6 +16,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.context.annotation.Profile
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.util.*
@@ -73,6 +74,7 @@ data class BridgeMqttConfig(
 )
 
 @Component
+@Profile("bridge")
 @EnableConfigurationProperties(BridgeMqttConfig::class)
 class BridgeMqtt(
     @Autowired private val bridgeMqttConfig: BridgeMqttConfig, @Autowired private val objectMapper: ObjectMapper

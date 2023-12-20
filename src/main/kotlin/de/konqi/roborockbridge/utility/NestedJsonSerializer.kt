@@ -9,7 +9,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 abstract class NestedJsonSerializer<T>(private val clazz: Class<T>) : Converter<T?, String> {
     override fun convert(value: T?): String {
         return try {
-            jacksonObjectMapper().writeValueAsString(value)
+            objectMapper.writeValueAsString(value)
         } catch (e: JsonProcessingException) {
             throw RuntimeException(e)
         }

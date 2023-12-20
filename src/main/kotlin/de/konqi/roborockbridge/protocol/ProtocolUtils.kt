@@ -6,7 +6,6 @@ import java.security.MessageDigest
 import java.util.*
 import kotlin.random.Random
 
-@Component
 class ProtocolUtils {
     companion object {
         const val CLIENT_ID = "RoborockBridge"

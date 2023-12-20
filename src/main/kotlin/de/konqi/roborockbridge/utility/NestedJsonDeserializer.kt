@@ -9,7 +9,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 abstract class NestedJsonDeserializer<T>(private val clazz:Class<T>) : Converter<String?, T?> {
     override fun convert(value: String?): T {
         return try {
-            jacksonObjectMapper().readValue(value, clazz)
+            objectMapper.readValue(value, clazz)
         } catch (e: JsonProcessingException) {
             throw RuntimeException(e)
         }

@@ -11,10 +11,12 @@ import jakarta.annotation.PreDestroy
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import java.nio.ByteBuffer
 
 @Component
+@Profile("bridge")
 class RoborockMqtt(
     @Autowired private val roborockCredentials: RoborockCredentials,
     @Autowired private val requestMemory: RequestMemory,

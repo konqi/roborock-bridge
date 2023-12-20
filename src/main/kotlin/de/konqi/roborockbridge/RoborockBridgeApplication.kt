@@ -1,8 +1,9 @@
 package de.konqi.roborockbridge
 
 import org.h2.tools.Server
+import org.springframework.boot.Banner
+import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
-import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Profile
 import org.springframework.scheduling.annotation.EnableAsync
@@ -27,5 +28,8 @@ class RoborockBridgeApplication {
 }
 
 fun main(args: Array<String>) {
-    runApplication<RoborockBridgeApplication>(*args)
+    val app = SpringApplication(RoborockBridgeApplication::class.java)
+    app.setAdditionalProfiles("bridge")
+    app.setBannerMode(Banner.Mode.OFF)
+    app.run(*args)
 }

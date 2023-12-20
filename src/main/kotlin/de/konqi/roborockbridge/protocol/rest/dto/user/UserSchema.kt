@@ -6,10 +6,10 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.treeToValue
 import de.konqi.roborockbridge.utility.NestedJsonDeserializer
+import de.konqi.roborockbridge.utility.objectMapper
 import java.io.IOException
 
 internal class UserSchemasParamDeserializer : NestedJsonDeserializer<UserSchemaParam>(UserSchemaParam::class.java)
@@ -46,8 +46,6 @@ data class UserSchemasParamActionItem(
 
 
 class ActionItemParamDeserializer : JsonDeserializer<ActionItemParam<*>?>() {
-    val objectMapper = jacksonObjectMapper()
-
     @Throws(IOException::class)
     override fun deserialize(
         jsonParser: JsonParser?,
