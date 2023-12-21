@@ -1,6 +1,9 @@
 package de.konqi.roborockbridge
 
+import de.konqi.roborockbridge.CaptureReader
 import org.h2.tools.Server
+import org.springframework.boot.ApplicationArguments
+import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.Banner
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -29,7 +32,11 @@ class RoborockBridgeApplication {
 
 fun main(args: Array<String>) {
     val app = SpringApplication(RoborockBridgeApplication::class.java)
-    app.setAdditionalProfiles("bridge")
+    if (args.any { it == "--mode=${CaptureReader.MODE_JSON_TO_CSV}" || it == "--mode=${CaptureReader.MODE_DECODE_CSV}" }) {
+        app.setAdditionalProfiles("capture-reader")
+    } else {
+        app.setAdditionalProfiles("bridge")
+    }
     app.setBannerMode(Banner.Mode.OFF)
     app.run(*args)
 }

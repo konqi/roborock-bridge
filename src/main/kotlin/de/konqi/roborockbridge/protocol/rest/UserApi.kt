@@ -19,7 +19,6 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 @Component
-@Profile("bridge")
 class UserApiRestTemplate(@Autowired private val credentials: RoborockCredentials) : RestTemplate() {
     // TODO This will not work - roborockData is late init
     private val hmacEncoder

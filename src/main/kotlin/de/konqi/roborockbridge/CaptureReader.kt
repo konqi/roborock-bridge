@@ -4,44 +4,45 @@ import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.konqi.roborockbridge.persistence.DeviceRepository
+import de.konqi.roborockbridge.persistence.HomeRepository
 import de.konqi.roborockbridge.persistence.entity.Device
 import de.konqi.roborockbridge.persistence.entity.Home
-import de.konqi.roborockbridge.protocol.mqtt.MessageDecoder
-import de.konqi.roborockbridge.protocol.mqtt.MessageWrapper
-import de.konqi.roborockbridge.protocol.mqtt.StatusUpdate
 import de.konqi.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.protocol.helper.RequestMemory
+import de.konqi.roborockbridge.protocol.mqtt.MessageDecoder
+import de.konqi.roborockbridge.protocol.mqtt.MessageWrapper
 import de.konqi.roborockbridge.protocol.mqtt.RequestMethod
+import de.konqi.roborockbridge.protocol.mqtt.StatusUpdate
 import de.konqi.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
 import de.konqi.roborockbridge.protocol.mqtt.ipc.response.GetPropGetStatusResponse
 import de.konqi.roborockbridge.protocol.mqtt.ipc.response.IpcResponseDps
 import de.konqi.roborockbridge.protocol.mqtt.ipc.response.IpcResponseWrapper
-import de.konqi.roborockbridge.protocol.mqtt.response.Protocol301
 import de.konqi.roborockbridge.protocol.mqtt.response.MapDataWrapper
+import de.konqi.roborockbridge.protocol.mqtt.response.Protocol301
 import de.konqi.roborockbridge.utility.cast
-import org.junit.jupiter.api.*
-import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.ApplicationArguments
+import org.springframework.boot.SpringApplication
+import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Profile
+import org.springframework.context.event.EventListener
 import org.springframework.security.crypto.codec.Hex
-import org.springframework.test.context.TestPropertySource
+import org.springframework.stereotype.Service
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.util.*
+import kotlin.system.exitProcess
 
 
 @ConfigurationProperties(prefix = "capture-reader")
 data class CaptureReaderConfiguration(
-    val devices: Map<String, String>,
-    val wiresharkExport: String = "captures/simple.json",
-    val csvFile: String = "captures/simple.csv"
+    val devices: Map<String, String>?,
+//    val wiresharkExport: String = "captures/simple.json",
+//    val csvFile: String = "captures/simple.csv"
 )
 
 /**
@@ -52,25 +53,103 @@ data class CaptureReaderConfiguration(
  *
  * TODO: Make app print device key on first run otherwise find device key via mqtt
  */
-@SpringBootTest(classes = [CaptureReader.Companion.ProvideJackson::class, RequestMemory::class, MessageDecoder::class])
-@TestPropertySource("classpath:application-dev.yaml")
-@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class CaptureReader {
-    @Autowired
-    lateinit var requestMemory: RequestMemory
+@Service
+@EnableConfigurationProperties(CaptureReaderConfiguration::class)
+@Profile("capture-reader")
+class CaptureReader(
+    @Autowired val requestMemory: RequestMemory,
+    @Autowired val messageDecoder: MessageDecoder,
+    @Autowired val objectMapper: ObjectMapper,
+    @Autowired val captureReaderConfiguration: CaptureReaderConfiguration,
+    @Autowired val appArgs: ApplicationArguments,
+    val deviceRepository: DeviceRepository,
+    val homeRepository: HomeRepository
+) {
+    @EventListener(ApplicationReadyEvent::class)
+    fun run() {
+        prepareEnv()
+        val inputFile = appArgs.getOptionValues("input")?.first()
+        val outputFile = appArgs.getOptionValues("output")?.first()
 
-    @Autowired
-    lateinit var messageDecoder: MessageDecoder
+        val mode = appArgs.getOptionValues("mode").first()
+        if (mode == MODE_JSON_TO_CSV) {
+            if (inputFile != null && outputFile != null) {
+                readWiresharkCaptureJson(inputFile, outputFile)
+                logger.info("Done.")
+            } else {
+                logger.error("No input and/or output file specified. Please specify with option: --input=<path_to_file> --output=<path_to_file>")
+                logUsage()
+            }
+        } else if (mode == MODE_DECODE_CSV) {
+            if (deviceRepository.count() < 1) {
+                logger.error("Cannot decode without device keys. Either provide them via configuration or command line option: --device=<deviceId>:<deviceKey>")
+                logUsage()
+                exitProcess(-1)
+            }
+            if (inputFile != null) {
+                decodeCsvFile(inputFile)
+                logger.info("Done.")
+            } else {
+                logger.error("No input file specified. Please specify with option: --input=<path_to_file>")
+                logUsage()
+            }
+        } else {
+            logger.error("Invalid or no mode specified.")
+            logUsage()
+        }
 
-    @Autowired
-    lateinit var captureReaderConfiguration: CaptureReaderConfiguration
+        exitProcess(0)
+    }
 
-    @Test
-    @Order(1)
-    @Disabled
-    fun readCapture() {
-        FileInputStream(captureReaderConfiguration.wiresharkExport).use {
-            FileOutputStream(captureReaderConfiguration.csvFile).use { fos ->
+    fun logUsage() {
+        logger.error("Usage:")
+        logger.error("--mode=<$MODE_JSON_TO_CSV|$MODE_DECODE_CSV>                       (required) Mode of operation")
+        logger.error("--input=<path_to_file>                       (required) Input file path e.g.: captures/file.json (do not use spaces or escape strings)")
+        logger.error("--output=<path_to_file>                      (required for mode $MODE_JSON_TO_CSV) Output file path e.g.: captures/file.csv (do not use spaces or escape strings)")
+        logger.error("--device=<deviceId>:<deviceKey>              (required if keys not provided via configuration) Must be device/key combination used for capturing network traffic")
+    }
+
+    fun prepareEnv() {
+        val fakeHome = homeRepository.save(Home(homeId = 0, name = "Fake Home"))
+        captureReaderConfiguration.devices?.map { (deviceId, deviceKey) ->
+            Device(
+                deviceId = deviceId,
+                deviceKey = deviceKey
+                    ?: throw RuntimeException("Must configure device $deviceId in properties"),
+                state = emptyList(),
+                serialNumber = "",
+                model = "",
+                firmwareVersion = "",
+                productName = "",
+                name = "",
+                home = fakeHome
+            )
+        }?.also {
+            deviceRepository.saveAll(it)
+        }
+
+        appArgs.getOptionValues("device")?.map {
+            val (deviceId, deviceKey) = it.split(":")
+            Device(
+                deviceId = deviceId,
+                deviceKey = deviceKey
+                    ?: throw RuntimeException("Must configure device $deviceId in properties"),
+                state = emptyList(),
+                serialNumber = "",
+                model = "",
+                firmwareVersion = "",
+                productName = "",
+                name = "",
+                home = fakeHome
+            )
+        }?.also {
+            deviceRepository.saveAll(it)
+        }
+    }
+
+    fun readWiresharkCaptureJson(inputCaptureJsonFile: String, outputCsvFile: String) {
+        FileInputStream(inputCaptureJsonFile).use {
+            FileOutputStream(outputCsvFile).use { fos ->
                 JsonFactory().createParser(it).use { jsonParser ->
                     var topic = ""
                     while (null != jsonParser.nextToken()) {
@@ -89,11 +168,8 @@ class CaptureReader {
         }
     }
 
-    @Test
-    @Order(2)
-//    @Disabled
-    fun readSimple() {
-        FileInputStream(captureReaderConfiguration.csvFile).use { fis ->
+    fun decodeCsvFile(inputCsvFile: String) {
+        FileInputStream(inputCsvFile).use { fis ->
             Scanner(fis).use { scanner ->
                 while (scanner.hasNextLine()) {
                     try {
@@ -187,41 +263,42 @@ class CaptureReader {
     }
 
     companion object {
-        val objectMapper = jacksonObjectMapper()
-
-        @TestConfiguration
-        @EnableConfigurationProperties(CaptureReaderConfiguration::class)
-        class ProvideJackson(@Autowired val knownDevices: CaptureReaderConfiguration) {
-            @Bean
-            fun objectMapper(): ObjectMapper {
-                return objectMapper
-            }
-
-            @Bean
-            fun robotRepository(): DeviceRepository {
-                val mock = Mockito.mock(DeviceRepository::class.java)
-                Mockito.`when`(mock.findById(Mockito.anyString())).then {
-                    val deviceId = it.arguments.first().toString()
-                    Optional.of(
-                        Device(
-                            deviceId = deviceId,
-                            deviceKey = knownDevices.devices[deviceId]
-                                ?: throw RuntimeException("Must configure device $deviceId in properties"),
-                            state = emptyList(),
-                            serialNumber = "",
-                            model = "",
-                            firmwareVersion = "",
-                            productName = "",
-                            name = "",
-                            home = Home(homeId = 0, name = "")
-
-                        )
-                    )
-                }
-                return mock
-            }
-        }
-
+        const val MODE_JSON_TO_CSV = "reduce"
+        const val MODE_DECODE_CSV = "decode"
+        val logger by LoggerDelegate()
+//        val objectMapper = jacksonObjectMapper()
+//
+//        @EnableConfigurationProperties(CaptureReaderConfiguration::class)
+//        class ProvideJackson(@Autowired val knownDevices: CaptureReaderConfiguration) {
+//            @Bean
+//            fun objectMapper(): ObjectMapper {
+//                return objectMapper
+//            }
+//
+//            @Bean
+//            fun robotRepository(): DeviceRepository {
+//                val mock = Mockito.mock(DeviceRepository::class.java)
+//                Mockito.`when`(mock.findById(Mockito.anyString())).then {
+//                    val deviceId = it.arguments.first().toString()
+//                    Optional.of(
+//                        Device(
+//                            deviceId = deviceId,
+//                            deviceKey = knownDevices.devices[deviceId]
+//                                ?: throw RuntimeException("Must configure device $deviceId in properties"),
+//                            state = emptyList(),
+//                            serialNumber = "",
+//                            model = "",
+//                            firmwareVersion = "",
+//                            productName = "",
+//                            name = "",
+//                            home = Home(homeId = 0, name = "")
+//
+//                        )
+//                    )
+//                }
+//                return mock
+//            }
+//        }
+//
     }
-
 }
