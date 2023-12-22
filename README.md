@@ -1,12 +1,44 @@
 # roborock-bridge
 
-This service connects to Roborock's servers and provides status information from your robot to your mqtt broker.
+This service connects to RR's servers and provides status information from your robot to your mqtt broker.
 It can also send simple commands and requests to the robot.
 
-## Short excursion on Roborock's APIs <small style="font-size: 0.5em;">(completely optional read)</small>
+## Setup & Start
 
-Sadly Roborock does not provide a public interface (i.e. APIs) for developers to create their own solutions.
-Some people smarter than me started to decompile Roborock's apps and reverse engineered a lot of the protocol.
+- configure authentication
+- configure mqtt
+
+Good question... So far I've only started it in IntelliJ ;-)
+
+TODO: what's required, download, configure, run
+
+## How to use
+
+What you'll get:
+
+| topic                                 | description |
+|---------------------------------------|-------------|
+| `home/<homeId>`                       |             |
+| `home/<homeId>/rooms`                 |             |
+| `home/<homeId>/schemas`               |             |
+| `home/<homeId>/device/<deviceId>`     |             |
+| `home/<homeId>/device/<deviceId>/map` |             |
+
+Commands:
+
+| postfix   | description |
+|-----------|-------------|
+| `/get`    |             |
+| `/action` |             |
+
+## Something is wrong
+
+Try resetting the authentication by deleting the auth.json file.
+
+## Short excursion on RR's APIs <small style="font-size: 0.5em;">(completely optional read)</small>
+
+Sadly RR does not provide a public interface (i.e. APIs) for developers to create their own solutions.
+Some people smarter than me started to decompile RR's apps and reverse engineered a lot of the protocol.
 Today, with a little help by a couple of extracted secrets and a bit of mitm traffic sniffing, we can see what the
 official app does and recreate some of it.
 
@@ -26,13 +58,7 @@ understand some of the errors this application might produce) are:
 This application hides all the different ways of communication and provides a single way of communication with your
 device via mqtt.
 IF you already have a mqtt broker running for things like zigbee2mqtt, this service should be right up your alley.
-However, if you have never heard of mqtt, and you have no idea what it is, you may want to continue Roborock's app.
-
-## Setup
-
-TODO: what's required, download, configure, run
-
-Reset: Delete auth.json
+However, if you have never heard of mqtt, and you have no idea what it is, you may want to continue RR's app.
 
 ## Todo-List
 

@@ -2,7 +2,9 @@ package de.konqi.roborockbridge.persistence.entity
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
+import org.hibernate.annotations.UpdateTimestamp
 import java.io.Serializable
+import java.util.*
 
 enum class ProtocolMode {
     RO,
@@ -11,7 +13,7 @@ enum class ProtocolMode {
 
 data class DeviceStateId(
     val device: String? = null,
-    val schemaId: Int? = null
+    val code: String? = null
 ) : Serializable
 
 @Entity
@@ -24,13 +26,16 @@ data class DeviceState(
     @JoinColumn(name = "device_id", nullable = false)
     val device: Device,
     @Id
-    @Column(name = "schema_id")
-    val schemaId: Int,
     val code: String,
+    @Column(name = "modified_date")
+    @field:UpdateTimestamp
+    val modifiedDate: Date = Date(),
     @Column(name = "current_value")
     val value: Int,
+    @Column(name = "schema_id")
+    val schemaId: Int? = null,
     @Enumerated(EnumType.STRING)
-    val mode: ProtocolMode,
-    val type: String,
-    val property: String?
+    val mode: ProtocolMode? = null,
+    val type: String? = null,
+    val property: String? = null,
 )

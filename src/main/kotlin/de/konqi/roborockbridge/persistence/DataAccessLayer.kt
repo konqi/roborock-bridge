@@ -6,6 +6,7 @@ import de.konqi.roborockbridge.protocol.rest.dto.user.UserHomeData
 import de.konqi.roborockbridge.protocol.rest.dto.user.UserSchema
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Component
+import java.util.*
 
 @Component
 class DataAccessLayer(
@@ -16,26 +17,20 @@ class DataAccessLayer(
     private val deviceStateRepository: DeviceStateRepository,
 ) {
     fun saveSchemas(
-        schemasFromRoborock: List<UserSchema>,
-        homeEntity: Home
+        schemasFromRoborock: List<UserSchema>, homeEntity: Home
     ): MutableIterable<Schema> {
         return schemaRepository.saveAll(schemasFromRoborock.map { schema ->
             Schema(
-                home = homeEntity,
-                schemaId = schema.id,
-                name = schema.name
+                home = homeEntity, schemaId = schema.id, name = schema.name
             )
         })
 
     }
 
     fun saveRooms(
-        homeDetails: UserHomeData,
-        homeEntity: Home
+        homeDetails: UserHomeData, homeEntity: Home
     ): MutableIterable<Room> {
-        return roomRepository.saveAll(
-            homeDetails.rooms.map { Room(home = homeEntity, roomId = it.id, name = it.name) }
-        )
+        return roomRepository.saveAll(homeDetails.rooms.map { Room(home = homeEntity, roomId = it.id, name = it.name) })
     }
 
     fun saveHome(home: HomeDetailData): Home {
@@ -61,22 +56,20 @@ class DataAccessLayer(
                 )
             )
 
-            val states = deviceStateRepository.saveAll(
-                product.schema.filter {
-                    // ignore ipc request and response
-                    it.id.toInt() > 102
-                } .map {
-                    DeviceState(
-                        device = newDevice,
-                        schemaId = it.id.toInt(),
-                        code = it.code,
-                        mode = ProtocolMode.valueOf(it.mode.uppercase()),
-                        type = it.type,
-                        property = it.property,
-                        value = device.deviceStatus[it.id.toInt()] ?: -1
-                    )
-                }
-            )
+            val states = deviceStateRepository.saveAll(product.schema.filter {
+                // ignore ipc request and response
+                it.id.toInt() > 102
+            }.map {
+                DeviceState(
+                    device = newDevice,
+                    schemaId = it.id.toInt(),
+                    code = it.code,
+                    mode = ProtocolMode.valueOf(it.mode.uppercase()),
+                    type = it.type,
+                    property = it.property,
+                    value = device.deviceStatus[it.id.toInt()] ?: -1
+                )
+            })
 
             newDevice.copy(state = states.toList())
         }
@@ -84,7 +77,39 @@ class DataAccessLayer(
 
     fun getDevice(deviceId: String) = deviceRepository.findById(deviceId)
 
+    fun getAllDeviceStatesModifiedAfterDate(deviceId: String, modifiedAfter: Date? = null) =
+        if (modifiedAfter != null) deviceStateRepository.findAllByDevice_DeviceIdAndModifiedDateAfter(
+            deviceId, modifiedAfter
+        )
+        else deviceStateRepository.findAllByDevice_DeviceId(deviceId)
+
     @Transactional
-    fun updateDeviceState(deviceId: String, schemaId: Int, newValue: Int) =
-        deviceStateRepository.updateStatus(DeviceStateId(deviceId, schemaId), newValue)
+    fun updateDeviceState(deviceId: String, code: String, newValue: Int) =
+        deviceStateRepository.updateStatus(DeviceStateId(deviceId, code), newValue)
+
+    /**
+     * Performs only required operations, thus leaving modified_date intact
+     */
+    @Transactional
+    fun updateDeviceStates(deviceId: String, states: Map<String, Int>) {
+        val codes = states.keys
+
+        deviceRepository.findById(deviceId).ifPresent { device ->
+            val existingDeviceStateEntries = device.state.filter { it.code in codes }
+            val updateCandidates = existingDeviceStateEntries.filter { it.value != states[it.code] }.map {
+                it.copy(
+                    // guaranteed to exist in states, since that is the base of the first filter
+                    value = states[it.code]!!
+                )
+            }
+
+            val existingCodes = existingDeviceStateEntries.map { it.code }
+            val creationCandidates = states.filter { it.key !in existingCodes }.map { (code, newValue) ->
+                DeviceState(device = device, code = code, value = newValue)
+            }
+
+            val entitiesToSave = updateCandidates + creationCandidates
+            deviceStateRepository.saveAll(entitiesToSave)
+        }
+    }
 }

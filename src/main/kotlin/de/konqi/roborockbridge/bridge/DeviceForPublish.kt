@@ -1,5 +1,6 @@
 package de.konqi.roborockbridge.bridge
 
+import de.konqi.roborockbridge.bridge.interpreter.SchemaValueInterpreter
 import de.konqi.roborockbridge.persistence.entity.Device
 
 data class DeviceForPublish(
@@ -11,10 +12,9 @@ data class DeviceForPublish(
     val model: String,
     val firmwareVersion: String,
     val serialNumber: String,
-    val state: List<DeviceStateForPublish> = emptyList()
 ) {
     companion object {
-        fun fromDeviceEntity(device: Device, interpreter: SchemaValueInterpreter) = DeviceForPublish(
+        fun fromDeviceEntity(device: Device) = DeviceForPublish(
             homeId = device.home.homeId,
             deviceId = device.deviceId,
             deviceKey = device.deviceKey,
@@ -23,7 +23,6 @@ data class DeviceForPublish(
             model = device.model,
             firmwareVersion = device.firmwareVersion,
             serialNumber = device.serialNumber,
-            state = device.state.map { DeviceStateForPublish.fromDeviceStateEntity(it, interpreter) }
         )
     }
 }

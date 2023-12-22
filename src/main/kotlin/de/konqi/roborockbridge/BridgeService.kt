@@ -1,15 +1,18 @@
 package de.konqi.roborockbridge
 
 import de.konqi.roborockbridge.bridge.DeviceForPublish
+import de.konqi.roborockbridge.bridge.DeviceStateForPublish
 import de.konqi.roborockbridge.bridge.MapDataForPublish
 import de.konqi.roborockbridge.persistence.*
 import de.konqi.roborockbridge.protocol.RoborockCredentials
 import de.konqi.roborockbridge.protocol.RoborockMqtt
 import de.konqi.roborockbridge.protocol.mqtt.StatusUpdate
-import de.konqi.roborockbridge.bridge.S8UltraInterpreter
+import de.konqi.roborockbridge.bridge.interpreter.S8UltraInterpreter
 import de.konqi.roborockbridge.protocol.mqtt.MessageWrapper
 import de.konqi.roborockbridge.protocol.mqtt.RequestMethod
 import de.konqi.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
+import de.konqi.roborockbridge.protocol.mqtt.ipc.response.GetPropGetStatusResponse
+import de.konqi.roborockbridge.protocol.mqtt.ipc.response.IpcResponseDps
 import de.konqi.roborockbridge.protocol.mqtt.ipc.response.IpcResponseWrapper
 import de.konqi.roborockbridge.protocol.mqtt.response.Protocol301
 import de.konqi.roborockbridge.protocol.mqtt.response.MapDataWrapper
@@ -23,6 +26,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.annotation.Profile
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
+import java.util.*
 
 
 @Service
@@ -36,6 +40,9 @@ class BridgeService(
     @Autowired private val bridgeMqtt: BridgeMqtt,
     @Autowired private val dataAccessLayer: DataAccessLayer,
 ) {
+
+    // TODO select correct interpreter
+    val interpreter = S8UltraInterpreter()
 
     private var run = true
 
@@ -58,18 +65,19 @@ class BridgeService(
         bridgeMqtt.announceHome(homeEntity)
         robots.map {
             DeviceForPublish.fromDeviceEntity(
-                it, /* TODO: Select correct interpreter */
-                S8UltraInterpreter()
+                it
             )
-        }.forEach(bridgeMqtt::announceDevice)
+        }.forEach {device ->
+            bridgeMqtt.announceDevice(device)
+            publishDeviceStatus(deviceId = device.deviceId)
+        }
+
         bridgeMqtt.announceRooms(rooms.toList())
 
         val schemasFromRoborock = userApi.getCleanupSchemas(homeEntity.homeId)
         val schemas =
             dataAccessLayer.saveSchemas(schemasFromRoborock, homeEntity)
         bridgeMqtt.announceSchemas(schemas.toList())
-
-        // logger.info("roborock://mqtt-eu-3.roborock.com:8883?u=${roborockCredentials.userId}&s=${roborockCredentials.sessionId}&k=${roborockCredentials.mqttKey}&did=${robots.first().deviceId}&key=${robots.first().deviceKey}&pin=1234")
     }
 
     @EventListener(ApplicationReadyEvent::class)
@@ -88,12 +96,15 @@ class BridgeService(
         }
     }
 
-    private fun publishDeviceStatus(deviceId: String) {
-        val device = dataAccessLayer.getDevice(deviceId)
-        device.ifPresent {
-            // TODO select correct interpreter
-            val interpreter = S8UltraInterpreter()
-            bridgeMqtt.announceDevice(DeviceForPublish.fromDeviceEntity(it, interpreter))
+    private fun publishDeviceStatus(deviceId: String, onlyUpdatesAfter: Date? = null) {
+        val device = dataAccessLayer.getDevice(deviceId).get()
+        val statesToPublish = dataAccessLayer.getAllDeviceStatesModifiedAfterDate(deviceId, onlyUpdatesAfter)
+        statesToPublish.forEach {
+            bridgeMqtt.publishDeviceState(
+                homeId = device.home.homeId,
+                deviceId = device.deviceId,
+                deviceState = DeviceStateForPublish.fromDeviceStateEntity(it, interpreter)
+            )
         }
     }
 
@@ -101,30 +112,49 @@ class BridgeService(
         while (roborockMqtt.inboundMessagesQueue.size > 0) {
             val message = roborockMqtt.inboundMessagesQueue.remove()
             when (message.messageSchemaType) {
-                IpcRequestWrapper.SCHEMA_TYPE -> { /* We should not receive requests */}
-                IpcResponseWrapper.SCHEMA_TYPE -> {}
+                IpcRequestWrapper.SCHEMA_TYPE -> { /* We should not receive requests */
+                }
+
+                IpcResponseWrapper.SCHEMA_TYPE -> {
+                    val payload = cast<MessageWrapper<IpcResponseDps<*>>>(message).payload
+                    if (payload.method == RequestMethod.GET_PROP && payload.result != null) {
+                        val result = cast<Array<GetPropGetStatusResponse>>(payload.result).first()
+                        dataAccessLayer.updateDeviceStates(message.deviceId, result.states)
+
+                        // notify
+                        publishDeviceStatus(message.deviceId)
+                    }
+                }
+
                 MapDataWrapper.SCHEMA_TYPE -> {
                     val payload = cast<MessageWrapper<Protocol301>>(message).payload
 
                     val homeId = dataAccessLayer.getDevice(message.deviceId).get().home.homeId
-                    val mapData = MapDataForPublish(map = payload.payload.map?.getImageDataUrl(),
+                    val mapData = MapDataForPublish(
+                        map = payload.payload.map?.getImageDataUrl(),
                         robotPosition = payload.payload.robotPosition,
                         chargerPosition = payload.payload.chargerPosition,
                         gotoPath = payload.payload.gotoPath?.points,
                         path = payload.payload.path?.points,
-                        predictedPath = payload.payload.predictedPath?.points)
+                        predictedPath = payload.payload.predictedPath?.points
+                    )
                     bridgeMqtt.publishMapData(homeId = homeId, deviceId = message.deviceId, mapData)
                 }
 
                 else -> {
                     message as StatusUpdate
-                    val property = message.messageSchemaType
+                    val schemaId = message.messageSchemaType
                     val value = message.value
-                    dataAccessLayer.updateDeviceState(message.deviceId, property, value)
-                    logger.debug("Status of '$property' is now '$value' for device ${message.deviceId}.")
+                    val code = interpreter.schemaIdToPropName(schemaId)
+                    if (code != null) {
+                        dataAccessLayer.updateDeviceState(message.deviceId, code, value)
+                        logger.debug("Status of '$code' is now '$value' for device ${message.deviceId}.")
 
-                    // notify
-                    publishDeviceStatus(message.deviceId)
+                        // notify
+                        publishDeviceStatus(message.deviceId)
+                    } else {
+                        logger.warn("Update for value with schemaId '$schemaId' has no corresponding code in interpreter and will be ignored.")
+                    }
                 }
             }
         }

@@ -1,42 +1,63 @@
-package de.konqi.roborockbridge.bridge
-
-interface SchemaValueInterpreter {
-    fun interpret(schemaId: Int, value: Int): String
-    fun getOptions(schemaId: Int): Map<Int, String>
-}
+package de.konqi.roborockbridge.bridge.interpreter
 
 class S8UltraInterpreter : SchemaValueInterpreter {
-    override fun interpret(schemaId: Int, value: Int): String {
-        return when (schemaId) {
-            120 -> ERROR_CODE_120[value]
-            121 -> DEVICE_STATES_101[value]
+    override val name: String
+        get() = "S8 Ultra Interpreter"
+
+    override val modelNames: Set<String>
+        get() = setOf("roborock.vacuum.a70")
+
+    override fun interpret(code: String, value: Int): String {
+        return when (code) {
+            SCHEMA_TO_CODE_MAPPING[120] -> ERROR_CODE_120[value]
+            SCHEMA_TO_CODE_MAPPING[121] -> DEVICE_STATES_101[value]
             // Battery
-            122 -> "$value %"
-            123 -> FAN_POWER_123[value]
-            124 -> WATER_BOX_124[value]
-            125 -> "$value %"
-            126 -> "$value %"
-            127 -> "$value %"
+            SCHEMA_TO_CODE_MAPPING[122] -> "$value %"
+            SCHEMA_TO_CODE_MAPPING[123] -> FAN_POWER_123[value]
+            SCHEMA_TO_CODE_MAPPING[124] -> WATER_BOX_124[value]
+            SCHEMA_TO_CODE_MAPPING[125] -> "$value %"
+            SCHEMA_TO_CODE_MAPPING[126] -> "$value %"
+            SCHEMA_TO_CODE_MAPPING[127] -> "$value %"
             // 128 -> 🤷
-            133 -> if (value == 1) "charging" else "not charging"
-            134 -> if (value == 1) "drying" else "not drying"
+            SCHEMA_TO_CODE_MAPPING[133] -> if (value == 1) "charging" else "not charging"
+            SCHEMA_TO_CODE_MAPPING[134] -> if (value == 1) "drying" else "not drying"
 
             else -> null
 
         } ?: "$value 🤷"
     }
 
-    override fun getOptions(schemaId: Int): Map<Int, String> {
-        return when(schemaId) {
-            120 -> ERROR_CODE_120
-            121 -> DEVICE_STATES_101
-            123 -> FAN_POWER_123
-            124 -> WATER_BOX_124
+    override fun getOptions(code: String): Map<Int, String> {
+        return when (code) {
+            SCHEMA_TO_CODE_MAPPING[120] -> ERROR_CODE_120
+            SCHEMA_TO_CODE_MAPPING[121] -> DEVICE_STATES_101
+            SCHEMA_TO_CODE_MAPPING[123] -> FAN_POWER_123
+            SCHEMA_TO_CODE_MAPPING[124] -> WATER_BOX_124
             else -> emptyMap()
         }
     }
 
+    override fun schemaIdToPropName(schemaId: Int): String? = SCHEMA_TO_CODE_MAPPING[schemaId]
+
     companion object {
+        val SCHEMA_TO_CODE_MAPPING = mapOf(
+            120 to "error_code",
+            121 to "state",
+            122 to "battery",
+            123 to "fan_power",
+            124 to "water_box_mode",
+            125 to "main_brush_life",
+            126 to "side_brush_life",
+            127 to "filter_life",
+            128 to "additional_props",
+            130 to "task_complete",
+            131 to "task_cancel_low_power",
+            132 to "task_cancel_in_motion",
+            133 to "charging_state",
+            134 to "drying_state"
+        )
+
+        // Value to meaning maps:
         val DEVICE_STATES_101 = mapOf(
             0 to "Unknown",
             1 to "Initiating",
