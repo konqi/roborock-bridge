@@ -1,6 +1,5 @@
 package de.konqi.roborockbridge.bridge
 
-import de.konqi.roborockbridge.bridge.interpreter.SchemaValueInterpreter
 import de.konqi.roborockbridge.persistence.entity.Device
 
 data class DeviceForPublish(

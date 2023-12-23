@@ -8,7 +8,6 @@ import de.konqi.roborockbridge.protocol.rest.dto.user.UserHomeData
 import de.konqi.roborockbridge.protocol.rest.dto.user.UserSchema
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.annotation.Profile
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpMethod
 import org.springframework.http.client.ClientHttpRequestInterceptor

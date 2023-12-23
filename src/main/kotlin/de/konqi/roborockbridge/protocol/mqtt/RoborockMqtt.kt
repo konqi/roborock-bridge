@@ -1,7 +1,9 @@
-package de.konqi.roborockbridge.protocol
+package de.konqi.roborockbridge.protocol.mqtt
 
 import de.konqi.roborockbridge.LoggerDelegate
 import de.konqi.roborockbridge.persistence.DeviceRepository
+import de.konqi.roborockbridge.protocol.ProtocolUtils
+import de.konqi.roborockbridge.protocol.RoborockCredentials
 import de.konqi.roborockbridge.protocol.helper.RequestData
 import de.konqi.roborockbridge.protocol.helper.RequestMemory
 import de.konqi.roborockbridge.protocol.mqtt.*
@@ -12,8 +14,10 @@ import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Profile
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Component
 @Profile("bridge")
@@ -83,6 +87,33 @@ class RoborockMqtt(
         if (mqttClient.isConnected) {
             mqttClient.disconnect()
         }
+        logger.info("disconnected")
+    }
+
+
+    val isAlive = AtomicBoolean(true)
+
+    @Scheduled(fixedDelay = 30_000)
+    private fun aliveCheck() {
+        if (isAlive.get()) {
+            isAlive.set(false)
+        } else {
+            if (mqttClient.isConnected) {
+                logger.info("disconnecting since bus idle")
+                // disconnect
+                disconnect()
+            }
+        }
+    }
+
+    private fun alive() {
+        if (!isAlive.get()) {
+            // connect
+            connect()
+            subscribe()
+
+            isAlive.set(true)
+        }
     }
 
     private fun connect() {
@@ -93,16 +124,19 @@ class RoborockMqtt(
                 }
 
                 override fun messageArrived(topic: String?, message: MqttMessage?) {
+                    alive()
                     logger.debug("New message for topic '$topic'")
                 }
 
                 override fun deliveryComplete(token: IMqttDeliveryToken?) {
+                    alive()
                     logger.debug("Message delivered")
                 }
             })
         }
 
         mqttClient.connect(mqttConnectOptions)
+        logger.info("connected")
     }
 
     private fun subscribe() {
@@ -138,6 +172,7 @@ class RoborockMqtt(
         parameters: List<String>? = null,
         secure: Boolean = false
     ) {
+        alive()
         val robot = robotRepository.findById(deviceId).orElseThrow {
             RuntimeException("No key available for device $deviceId")
         }
@@ -160,10 +195,12 @@ class RoborockMqtt(
     }
 
     fun publishStatusRequest(deviceId: String) {
+        alive()
         publishRequest(deviceId = deviceId, method = RequestMethod.GET_PROP, parameters = listOf("get_status"))
     }
 
     fun publishMapRequest(deviceId: String) {
+        alive()
         publishRequest(deviceId = deviceId, method = RequestMethod.GET_MAP_V1, secure = true)
     }
 

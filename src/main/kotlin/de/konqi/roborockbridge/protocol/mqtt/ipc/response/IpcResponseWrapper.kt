@@ -9,7 +9,7 @@ data class IpcResponseWrapper @JsonCreator constructor(
     val dps: Map<String, String>
 ) {
     @JsonCreator
-    constructor() : this(0u, emptyMap()) {}
+    constructor() : this(0u, emptyMap())
 
     companion object {
         const val SCHEMA_TYPE = 102

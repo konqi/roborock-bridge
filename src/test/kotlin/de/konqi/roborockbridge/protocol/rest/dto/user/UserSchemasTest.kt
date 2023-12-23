@@ -12,13 +12,6 @@ import java.util.*
 class UserSchemasTest(@Autowired val objectMapper: ObjectMapper) {
     @Test
     fun testDeserialize() {
-//        val objectMapper = jacksonObjectMapper()
-//        objectMapper.registerModules(SimpleModule().apply {
-//            addDeserializer(
-//                UserSchemasParamActionItemParam::class.java,
-//                UserSchemasParamActionItemParamDeserializer()
-//            )
-//        })
         assertDoesNotThrow {
             val jsonString = String(Base64.getDecoder().decode(BLOB))
             val userSchemas: UserApiResponseDto<List<UserSchema>> = objectMapper.readValue(jsonString)

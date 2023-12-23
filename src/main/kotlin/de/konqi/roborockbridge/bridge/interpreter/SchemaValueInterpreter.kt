@@ -1,5 +1,11 @@
 package de.konqi.roborockbridge.bridge.interpreter
 
+import de.konqi.roborockbridge.persistence.DataAccessLayer
+import de.konqi.roborockbridge.persistence.entity.Device
+import de.konqi.roborockbridge.persistence.entity.DeviceState
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Service
+
 /**
  * Interface for device state value interpreters
  *
@@ -39,5 +45,29 @@ interface SchemaValueInterpreter {
      * Function to translate schemaId to code
      */
     fun schemaIdToPropName(schemaId: Int): String?
+
+    /**
+     * Function to translate all-the-states into a simplified state for the bridge
+     */
+    fun getState(currentState: Map<String, Int>):BridgeDeviceState
+}
+
+fun SchemaValueInterpreter.getState(deviceState: Iterable<DeviceState>) = this.getState(deviceState.map { it.code to it.value }.toMap())
+
+@Service
+class InterpreterProvider(
+    @Autowired val interpreters: List<SchemaValueInterpreter>,
+    @Autowired val dataAccessLayer: DataAccessLayer
+) {
+    fun getInterpreterForModel(modelName: String): SchemaValueInterpreter? =
+        interpreters.find { it.modelNames.contains(modelName) }
+
+    fun getInterpreterForDevice(device: Device): SchemaValueInterpreter? =
+        getInterpreterForModel(device.model)
+
+    fun getInterpreterForDevice(deviceId: String): SchemaValueInterpreter? {
+        val device = dataAccessLayer.getDevice(deviceId).get()
+        return interpreters.find { it.modelNames.contains(device.model) }
+    }
 }
 

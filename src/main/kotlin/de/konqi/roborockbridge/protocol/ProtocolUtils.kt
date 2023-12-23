@@ -1,7 +1,6 @@
 package de.konqi.roborockbridge.protocol
 
 import org.springframework.security.crypto.codec.Hex
-import org.springframework.stereotype.Component
 import java.security.MessageDigest
 import java.util.*
 import kotlin.random.Random

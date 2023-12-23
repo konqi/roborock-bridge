@@ -23,7 +23,6 @@ import de.konqi.roborockbridge.protocol.mqtt.response.Protocol301
 import de.konqi.roborockbridge.utility.cast
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.ApplicationArguments
-import org.springframework.boot.SpringApplication
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -114,8 +113,7 @@ class CaptureReader(
         captureReaderConfiguration.devices?.map { (deviceId, deviceKey) ->
             Device(
                 deviceId = deviceId,
-                deviceKey = deviceKey
-                    ?: throw RuntimeException("Must configure device $deviceId in properties"),
+                deviceKey = deviceKey,
                 state = emptyList(),
                 serialNumber = "",
                 model = "",
@@ -132,8 +130,7 @@ class CaptureReader(
             val (deviceId, deviceKey) = it.split(":")
             Device(
                 deviceId = deviceId,
-                deviceKey = deviceKey
-                    ?: throw RuntimeException("Must configure device $deviceId in properties"),
+                deviceKey = deviceKey,
                 state = emptyList(),
                 serialNumber = "",
                 model = "",
@@ -239,7 +236,7 @@ class CaptureReader(
                                 MapDataWrapper.SCHEMA_TYPE -> {
                                     val mapResponse = cast<MessageWrapper<Protocol301>>(decodedMessage)
                                     if (mapResponse.payload.payload.map != null) {
-                                        val base64Url = mapResponse.payload.payload.map!!.getImageDataUrl()
+                                        val base64Url = mapResponse.payload.payload.map.getImageDataUrl()
                                         println(" <- Image Url: $base64Url")
                                     }
                                     println(" <- Map Data ${mapResponse.payload.payload.robotPosition?.toString()}")

@@ -1,5 +1,8 @@
 package de.konqi.roborockbridge.bridge.interpreter
 
+import org.springframework.stereotype.Service
+
+@Service
 class S8UltraInterpreter : SchemaValueInterpreter {
     override val name: String
         get() = "S8 Ultra Interpreter"
@@ -38,6 +41,10 @@ class S8UltraInterpreter : SchemaValueInterpreter {
     }
 
     override fun schemaIdToPropName(schemaId: Int): String? = SCHEMA_TO_CODE_MAPPING[schemaId]
+
+    override fun getState(currentState: Map<String, Int>): BridgeDeviceState {
+        return BridgeDeviceState.UNKNOWN
+    }
 
     companion object {
         val SCHEMA_TO_CODE_MAPPING = mapOf(

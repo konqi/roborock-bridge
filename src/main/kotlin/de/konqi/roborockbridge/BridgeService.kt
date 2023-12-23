@@ -3,11 +3,12 @@ package de.konqi.roborockbridge
 import de.konqi.roborockbridge.bridge.DeviceForPublish
 import de.konqi.roborockbridge.bridge.DeviceStateForPublish
 import de.konqi.roborockbridge.bridge.MapDataForPublish
+import de.konqi.roborockbridge.bridge.SchemaForPublish
+import de.konqi.roborockbridge.bridge.interpreter.InterpreterProvider
 import de.konqi.roborockbridge.persistence.*
 import de.konqi.roborockbridge.protocol.RoborockCredentials
-import de.konqi.roborockbridge.protocol.RoborockMqtt
+import de.konqi.roborockbridge.protocol.mqtt.RoborockMqtt
 import de.konqi.roborockbridge.protocol.mqtt.StatusUpdate
-import de.konqi.roborockbridge.bridge.interpreter.S8UltraInterpreter
 import de.konqi.roborockbridge.protocol.mqtt.MessageWrapper
 import de.konqi.roborockbridge.protocol.mqtt.RequestMethod
 import de.konqi.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
@@ -39,11 +40,8 @@ class BridgeService(
     @Autowired private val roborockCredentials: RoborockCredentials,
     @Autowired private val bridgeMqtt: BridgeMqtt,
     @Autowired private val dataAccessLayer: DataAccessLayer,
+    @Autowired private val interpreterProvider: InterpreterProvider
 ) {
-
-    // TODO select correct interpreter
-    val interpreter = S8UltraInterpreter()
-
     private var run = true
 
     fun init() {
@@ -63,11 +61,7 @@ class BridgeService(
 
         // announce devices on mqtt broker
         bridgeMqtt.announceHome(homeEntity)
-        robots.map {
-            DeviceForPublish.fromDeviceEntity(
-                it
-            )
-        }.forEach {device ->
+        robots.map(DeviceForPublish::fromDeviceEntity).forEach { device ->
             bridgeMqtt.announceDevice(device)
             publishDeviceStatus(deviceId = device.deviceId)
         }
@@ -77,7 +71,8 @@ class BridgeService(
         val schemasFromRoborock = userApi.getCleanupSchemas(homeEntity.homeId)
         val schemas =
             dataAccessLayer.saveSchemas(schemasFromRoborock, homeEntity)
-        bridgeMqtt.announceSchemas(schemas.toList())
+
+        bridgeMqtt.announceSchemas(schemas.map(SchemaForPublish::fromSchemaEntity))
     }
 
     @EventListener(ApplicationReadyEvent::class)
@@ -98,13 +93,18 @@ class BridgeService(
 
     private fun publishDeviceStatus(deviceId: String, onlyUpdatesAfter: Date? = null) {
         val device = dataAccessLayer.getDevice(deviceId).get()
-        val statesToPublish = dataAccessLayer.getAllDeviceStatesModifiedAfterDate(deviceId, onlyUpdatesAfter)
-        statesToPublish.forEach {
-            bridgeMqtt.publishDeviceState(
-                homeId = device.home.homeId,
-                deviceId = device.deviceId,
-                deviceState = DeviceStateForPublish.fromDeviceStateEntity(it, interpreter)
-            )
+        val interpreter = interpreterProvider.getInterpreterForDevice(device)
+        if (interpreter != null) {
+            val statesToPublish = dataAccessLayer.getAllDeviceStatesModifiedAfterDate(deviceId, onlyUpdatesAfter)
+            statesToPublish.forEach {
+                bridgeMqtt.publishDeviceState(
+                    homeId = device.home.homeId,
+                    deviceId = device.deviceId,
+                    deviceState = DeviceStateForPublish.fromDeviceStateEntity(it, interpreter)
+                )
+            }
+        } else {
+            logger.error("No interpreter available for device model '${device.model}'")
         }
     }
 
@@ -118,11 +118,12 @@ class BridgeService(
                 IpcResponseWrapper.SCHEMA_TYPE -> {
                     val payload = cast<MessageWrapper<IpcResponseDps<*>>>(message).payload
                     if (payload.method == RequestMethod.GET_PROP && payload.result != null) {
+                        val notifyAboutChangesAfter = Date()
                         val result = cast<Array<GetPropGetStatusResponse>>(payload.result).first()
                         dataAccessLayer.updateDeviceStates(message.deviceId, result.states)
 
                         // notify
-                        publishDeviceStatus(message.deviceId)
+                        publishDeviceStatus(message.deviceId, notifyAboutChangesAfter)
                     }
                 }
 
@@ -143,15 +144,19 @@ class BridgeService(
 
                 else -> {
                     message as StatusUpdate
+
                     val schemaId = message.messageSchemaType
                     val value = message.value
-                    val code = interpreter.schemaIdToPropName(schemaId)
+                    val code = interpreterProvider
+                        .getInterpreterForDevice(message.deviceId)?.schemaIdToPropName(schemaId)
+
                     if (code != null) {
+                        val notifyAboutChangesAfter = Date()
                         dataAccessLayer.updateDeviceState(message.deviceId, code, value)
                         logger.debug("Status of '$code' is now '$value' for device ${message.deviceId}.")
 
                         // notify
-                        publishDeviceStatus(message.deviceId)
+                        publishDeviceStatus(message.deviceId, notifyAboutChangesAfter)
                     } else {
                         logger.warn("Update for value with schemaId '$schemaId' has no corresponding code in interpreter and will be ignored.")
                     }

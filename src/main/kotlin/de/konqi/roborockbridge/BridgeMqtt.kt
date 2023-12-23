@@ -5,10 +5,11 @@ import com.fasterxml.jackson.module.kotlin.treeToValue
 import de.konqi.roborockbridge.bridge.DeviceForPublish
 import de.konqi.roborockbridge.bridge.DeviceStateForPublish
 import de.konqi.roborockbridge.bridge.MapDataForPublish
+import de.konqi.roborockbridge.bridge.SchemaForPublish
 import de.konqi.roborockbridge.persistence.entity.Home
 import de.konqi.roborockbridge.persistence.entity.Room
-import de.konqi.roborockbridge.persistence.entity.Schema
 import de.konqi.roborockbridge.utility.CircularConcurrentLinkedQueue
+import de.konqi.roborockbridge.utility.camelToSnakeCase
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.eclipse.paho.client.mqttv3.MqttClient
@@ -145,9 +146,9 @@ class BridgeMqtt(
     }
 
     fun handleMessage(topic: String, message: MqttMessage) {
-        if(!CommandType.entries.any {
-            topic.endsWith(it.value)
-        }) {
+        if (!CommandType.entries.any {
+                topic.endsWith(it.value)
+            }) {
             logger.debug("Topic '$topic' is not a command, ignoring it.")
             return
         }
@@ -157,7 +158,7 @@ class BridgeMqtt(
         val deviceId = topicParams[DEVICE_ID]
         val surplus = topicParams["surplus"] ?: ""
         val cmdStr = surplus.split("/").last()
-        val cmd = CommandType.Companion.fromValue(cmdStr)
+        val cmd = CommandType.fromValue(cmdStr)
         val properties = surplus.split("/").let {
             val indexOfParams = it.indexOf(deviceId) + 1
             it.slice(indexOfParams..<it.size - 1)
@@ -178,7 +179,7 @@ class BridgeMqtt(
 
                 inboundMessagesQueue.add(
                     ActionCommand(
-                        action = ActionEnum.Companion.fromValue(
+                        action = ActionEnum.fromValue(
                             messageBody?.get("action")?.textValue()
                         ),
                         arguments = if (args != null) objectMapper.treeToValue<Map<String, String>>(args) else emptyMap(),
@@ -253,60 +254,67 @@ class BridgeMqtt(
     }
 
     fun publishDeviceState(homeId: Int, deviceId: String, deviceState: DeviceStateForPublish) {
-        val topic = getDeviceTopic(homeId = homeId, deviceId = deviceId)
+        val topic = getPropertyTopic(homeId = homeId, deviceId = deviceId, deviceState.name)
         val payload = objectMapper.writeValueAsBytes(deviceState)
-        mqttClient.publish("$topic/${deviceState.name}", payload, 0, true)
+        mqttClient.publish(topic, payload, 0, true)
     }
 
     fun announceRooms(rooms: List<Room>) {
         logger.info("Announcing ${rooms.size} rooms.")
-        val topic = ROOM_TOPIC.replace(Companion.HOME_TOPIC, getHomeTopic(rooms.first().home.homeId))
+        val topic = ROOM_TOPIC.replace(HOME_TOPIC, getHomeTopic(rooms.first().home.homeId))
         val payload = objectMapper.writeValueAsBytes(rooms)
         mqttClient.publish(
             topic, payload, 0, true
         )
     }
 
-    fun announceSchemas(schemas: List<Schema>) {
+    fun announceSchemas(schemas: List<SchemaForPublish>) {
         logger.info("Announcing ${schemas.size} schemas.")
-        val topic = SCHEMA_TOPIC.replace(Companion.HOME_TOPIC, getHomeTopic(schemas.first().home.homeId))
-        val payload = objectMapper.writeValueAsBytes(schemas)
-        mqttClient.publish(topic, payload, 0, true)
+        val topic = SCHEMA_TOPIC.replace(HOME_TOPIC, getHomeTopic(schemas.first().homeId))
+        schemas.forEach {
+            val payload = objectMapper.writeValueAsBytes(it)
+            mqttClient.publish("$topic/${it.id}", payload, 0, true)
+        }
     }
 
-    fun publishVolatile(homeId: Int, deviceId: String, property: String, payload: ByteArray) {
-        val topic = getPropertyTopic(homeId, deviceId, property)
-        mqttClient.publish(topic, payload, 0, false)
-    }
+//    fun publishVolatile(homeId: Int, deviceId: String, property: String, payload: ByteArray) {
+//        val topic = getPropertyTopic(homeId, deviceId, property)
+//        mqttClient.publish(topic, payload, 0, false)
+//    }
 
     fun publishMapData(homeId: Int, deviceId: String, payload: MapDataForPublish) {
-        val topic = getPropertyTopic(homeId, deviceId, "map")
-        mqttClient.publish(topic, objectMapper.writeValueAsBytes(payload), 0, false)
+        payload.getFields().forEach {
+            val sectionData = payload[it]
+            val name = it.camelToSnakeCase()
+            val topic = getPropertyTopic(homeId, deviceId, name)
+            mqttClient.publish(topic, objectMapper.writeValueAsBytes(sectionData), 0, false)
+        }
     }
 
-
     fun getHomeTopic(homeId: Int): String {
-        return Companion.HOME_TOPIC.replace("{$BASE_TOPIC}", bridgeMqttConfig.baseTopic).replace("{$HOME_ID}", homeId.toString())
+        return HOME_TOPIC.replace("{$BASE_TOPIC}", bridgeMqttConfig.baseTopic)
+            .replace("{$HOME_ID}", homeId.toString())
     }
 
     fun getDeviceTopic(homeId: Int, deviceId: String): String {
-        return Companion.DEVICE_TOPIC.replace(Companion.HOME_TOPIC, getHomeTopic(homeId)).replace("{$DEVICE_ID}", deviceId)
+        return DEVICE_TOPIC.replace(HOME_TOPIC, getHomeTopic(homeId))
+            .replace("{$DEVICE_ID}", deviceId)
     }
 
     fun getPropertyTopic(homeId: Int, deviceId: String, property: String): String {
-        return Companion.DEVICE_PROPERTY_TOPIC.replace(Companion.DEVICE_TOPIC, getDeviceTopic(homeId, deviceId))
+        return DEVICE_PROPERTY_TOPIC.replace(DEVICE_TOPIC, getDeviceTopic(homeId, deviceId))
             .replace("{$PROPERTY}", property)
     }
 
     fun getPropertyCommandTopic(homeId: Int, deviceId: String, property: String, cmd: String): String {
-        return Companion.DEVICE_PROPERTY_COMMAND_TOPIC.replace(
-            Companion.DEVICE_PROPERTY_TOPIC,
+        return DEVICE_PROPERTY_COMMAND_TOPIC.replace(
+            DEVICE_PROPERTY_TOPIC,
             getPropertyTopic(homeId, deviceId, property)
         ).replace("{$COMMAND}", cmd)
     }
 
     fun getDeviceLogTopic(homeId: Int, deviceId: String): String {
-        return Companion.DEVICE_LOG_TOPIC.replace(Companion.DEVICE_TOPIC, getDeviceTopic(homeId, deviceId))
+        return DEVICE_LOG_TOPIC.replace(DEVICE_TOPIC, getDeviceTopic(homeId, deviceId))
     }
 
     fun getBridgeLogTopic(): String {
@@ -338,13 +346,13 @@ class BridgeMqtt(
         const val DEVICE_TOPIC_PARTIAL = "$DEVICE/{$DEVICE_ID}"
 
         //        const val ROOM_TOPIC_PARTIAL = "$ROOM/{$ROOM_ID}"
-        const val HOME_TOPIC = "{$BASE_TOPIC}/${Companion.HOME_TOPIC_PARTIAL}"
-        const val ROOM_TOPIC = "${Companion.HOME_TOPIC}/rooms"
-        const val SCHEMA_TOPIC = "${Companion.HOME_TOPIC}/schemas"
-        const val DEVICE_TOPIC = "${Companion.HOME_TOPIC}/${Companion.DEVICE_TOPIC_PARTIAL}"
-        const val DEVICE_PROPERTY_TOPIC = "${Companion.DEVICE_TOPIC}/{$PROPERTY}"
-        const val DEVICE_PROPERTY_COMMAND_TOPIC = "${Companion.DEVICE_PROPERTY_TOPIC}/{$COMMAND}"
-        const val DEVICE_LOG_TOPIC = "${Companion.DEVICE_TOPIC}/$LOG"
+        const val HOME_TOPIC = "{$BASE_TOPIC}/${HOME_TOPIC_PARTIAL}"
+        const val ROOM_TOPIC = "${HOME_TOPIC}/rooms"
+        const val SCHEMA_TOPIC = "${HOME_TOPIC}/schemas"
+        const val DEVICE_TOPIC = "${HOME_TOPIC}/${DEVICE_TOPIC_PARTIAL}"
+        const val DEVICE_PROPERTY_TOPIC = "${DEVICE_TOPIC}/{$PROPERTY}"
+        const val DEVICE_PROPERTY_COMMAND_TOPIC = "${DEVICE_PROPERTY_TOPIC}/{$COMMAND}"
+        const val DEVICE_LOG_TOPIC = "${DEVICE_TOPIC}/$LOG"
         const val BRIDGE_LOG_TOPIC = "{$BASE_TOPIC}/$LOG"
     }
 }

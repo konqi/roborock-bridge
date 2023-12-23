@@ -17,7 +17,7 @@ data class Room(
     var yMax: Int
 )
 
-enum class PixelType() {
+enum class PixelType {
     OUTSIDE,
     INSIDE,
     WALL,

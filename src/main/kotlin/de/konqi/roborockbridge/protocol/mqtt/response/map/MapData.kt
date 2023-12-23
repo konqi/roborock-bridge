@@ -14,8 +14,8 @@ class MapData(val data: ByteArray) {
     val bodyLength = buffer.getInt().toUInt()
 
     // wrap byte buffer around existing data to save memory
-    val header = buffer.reset().slice().limit(headerLength.toInt()).order(ByteOrder.LITTLE_ENDIAN)
-    val body = buffer.duplicate().position(headerLength.toInt()).slice().order(ByteOrder.LITTLE_ENDIAN)
+    val header: ByteBuffer = buffer.reset().slice().limit(headerLength.toInt()).order(ByteOrder.LITTLE_ENDIAN)
+    val body: ByteBuffer = buffer.duplicate().position(headerLength.toInt()).slice().order(ByteOrder.LITTLE_ENDIAN)
     val digest = String(Hex.encode(data.copyOfRange(data.size - 20, data.size)))
     val calculatedDigest: String
         get() = String(
