@@ -43,25 +43,46 @@ class S8UltraInterpreter : SchemaValueInterpreter {
     override fun schemaIdToPropName(schemaId: Int): String? = SCHEMA_TO_CODE_MAPPING[schemaId]
 
     override fun getState(currentState: Map<String, Int>): BridgeDeviceState {
-        return BridgeDeviceState.UNKNOWN
+        return if (IDLE_STATES.any { currentState[STATE] == it }) {
+            BridgeDeviceState.IDLE
+        } else if (ACTIVE_STATES.any { currentState[STATE] == it }) {
+            BridgeDeviceState.ACTIVE
+        } else {
+            BridgeDeviceState.UNKNOWN
+        }
     }
 
     companion object {
+        const val ERROR_CODE = "error_code"
+        const val STATE = "state"
+        const val BATTERY = "battery"
+        const val FAN_POWER = "fan_power"
+        const val WATER_BOX_MODE = "water_box_mode"
+        const val MAIN_BRUSH_LIFE = "main_brush_life"
+        const val SIDE_BRUSH_LIFE = "side_brush_life"
+        const val FILTER_LIFE = "filter_life"
+        const val ADDITIONAL_PROPS = "additional_props"
+        const val TASK_COMPLETE = "task_complete"
+        const val TASK_CANCEL_LOW_POWER = "task_cancel_low_power"
+        const val TASK_CANCEL_IN_MOTION = "task_cancel_in_motion"
+        const val CHARGING_STATE = "charging_state"
+        const val DRYING_STATE = "drying_state"
+
         val SCHEMA_TO_CODE_MAPPING = mapOf(
-            120 to "error_code",
-            121 to "state",
-            122 to "battery",
-            123 to "fan_power",
-            124 to "water_box_mode",
-            125 to "main_brush_life",
-            126 to "side_brush_life",
-            127 to "filter_life",
-            128 to "additional_props",
-            130 to "task_complete",
-            131 to "task_cancel_low_power",
-            132 to "task_cancel_in_motion",
-            133 to "charging_state",
-            134 to "drying_state"
+            120 to ERROR_CODE,
+            121 to STATE,
+            122 to BATTERY,
+            123 to FAN_POWER,
+            124 to WATER_BOX_MODE,
+            125 to MAIN_BRUSH_LIFE,
+            126 to SIDE_BRUSH_LIFE,
+            127 to FILTER_LIFE,
+            128 to ADDITIONAL_PROPS,
+            130 to TASK_COMPLETE,
+            131 to TASK_CANCEL_LOW_POWER,
+            132 to TASK_CANCEL_IN_MOTION,
+            133 to CHARGING_STATE,
+            134 to DRYING_STATE
         )
 
         // Value to meaning maps:
@@ -92,6 +113,9 @@ class S8UltraInterpreter : SchemaValueInterpreter {
             29 to "Mapping",
             100 to "Fully Charged",
         )
+        val IDLE_STATES = listOf(2, 3)
+        val ACTIVE_STATES = listOf(4, 5, 6, 11, 15, 22, 23, 29)
+
         val ERROR_CODE_120 = mapOf(
             0 to "No error",
             1 to "Laser sensor fault",

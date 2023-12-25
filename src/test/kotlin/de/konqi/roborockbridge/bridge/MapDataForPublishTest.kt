@@ -1,6 +1,6 @@
 package de.konqi.roborockbridge.bridge
 
-import de.konqi.roborockbridge.protocol.mqtt.response.map.Coordinate
+import de.konqi.roborockbridge.remote.mqtt.response.map.Coordinate
 import org.junit.jupiter.api.Test
 import org.assertj.core.api.Assertions.assertThat
 

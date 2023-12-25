@@ -32,6 +32,13 @@ enum class BridgeDeviceState {
     ERROR_IDLE,
 
     /**
+     * The device could not be reached via MQTT. This can be a temporary thing.
+     * e.g. no wifi coverage, battery empty
+     * Bridge should attempt to poll with exponential backoff.
+     */
+    UNREACHABLE,
+
+    /**
      * The state of the device is unknown.
      * The bridge will very rarely attempt to poll for a new state unless it
      * has just started.

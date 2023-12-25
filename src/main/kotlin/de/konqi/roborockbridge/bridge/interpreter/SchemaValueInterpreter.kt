@@ -49,10 +49,11 @@ interface SchemaValueInterpreter {
     /**
      * Function to translate all-the-states into a simplified state for the bridge
      */
-    fun getState(currentState: Map<String, Int>):BridgeDeviceState
+    fun getState(currentState: Map<String, Int>): BridgeDeviceState
 }
 
-fun SchemaValueInterpreter.getState(deviceState: Iterable<DeviceState>) = this.getState(deviceState.map { it.code to it.value }.toMap())
+fun SchemaValueInterpreter.getState(deviceState: List<DeviceState>) =
+    this.getState(deviceState.associate { it.code to it.value })
 
 @Service
 class InterpreterProvider(

@@ -1,9 +1,9 @@
 package de.konqi.roborockbridge.persistence
 
 import de.konqi.roborockbridge.persistence.entity.*
-import de.konqi.roborockbridge.protocol.rest.dto.login.HomeDetailData
-import de.konqi.roborockbridge.protocol.rest.dto.user.UserHomeData
-import de.konqi.roborockbridge.protocol.rest.dto.user.UserSchema
+import de.konqi.roborockbridge.remote.rest.dto.login.HomeDetailData
+import de.konqi.roborockbridge.remote.rest.dto.user.UserHomeData
+import de.konqi.roborockbridge.remote.rest.dto.user.UserSchema
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Component
 import java.util.*
@@ -27,11 +27,14 @@ class DataAccessLayer(
 
     }
 
+
     fun saveRooms(
         homeDetails: UserHomeData, homeEntity: Home
     ): MutableIterable<Room> {
         return roomRepository.saveAll(homeDetails.rooms.map { Room(home = homeEntity, roomId = it.id, name = it.name) })
     }
+
+    fun getHomes() = homeRepository.findAll()
 
     fun saveHome(home: HomeDetailData): Home {
         return homeRepository.save(Home(homeId = home.rrHomeId, name = home.name))

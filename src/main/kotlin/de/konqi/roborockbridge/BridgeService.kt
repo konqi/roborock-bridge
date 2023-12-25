@@ -4,31 +4,63 @@ import de.konqi.roborockbridge.bridge.DeviceForPublish
 import de.konqi.roborockbridge.bridge.DeviceStateForPublish
 import de.konqi.roborockbridge.bridge.MapDataForPublish
 import de.konqi.roborockbridge.bridge.SchemaForPublish
+import de.konqi.roborockbridge.bridge.interpreter.BridgeDeviceState
 import de.konqi.roborockbridge.bridge.interpreter.InterpreterProvider
+import de.konqi.roborockbridge.bridge.interpreter.getState
 import de.konqi.roborockbridge.persistence.*
-import de.konqi.roborockbridge.protocol.RoborockCredentials
-import de.konqi.roborockbridge.protocol.mqtt.RoborockMqtt
-import de.konqi.roborockbridge.protocol.mqtt.StatusUpdate
-import de.konqi.roborockbridge.protocol.mqtt.MessageWrapper
-import de.konqi.roborockbridge.protocol.mqtt.RequestMethod
-import de.konqi.roborockbridge.protocol.mqtt.ipc.request.IpcRequestWrapper
-import de.konqi.roborockbridge.protocol.mqtt.ipc.response.GetPropGetStatusResponse
-import de.konqi.roborockbridge.protocol.mqtt.ipc.response.IpcResponseDps
-import de.konqi.roborockbridge.protocol.mqtt.ipc.response.IpcResponseWrapper
-import de.konqi.roborockbridge.protocol.mqtt.response.Protocol301
-import de.konqi.roborockbridge.protocol.mqtt.response.MapDataWrapper
-import de.konqi.roborockbridge.protocol.rest.HomeApi
-import de.konqi.roborockbridge.protocol.rest.LoginApi
-import de.konqi.roborockbridge.protocol.rest.UserApi
+import de.konqi.roborockbridge.persistence.entity.Device
+import de.konqi.roborockbridge.remote.RoborockCredentials
+import de.konqi.roborockbridge.remote.mqtt.RoborockMqtt
+import de.konqi.roborockbridge.remote.mqtt.StatusUpdate
+import de.konqi.roborockbridge.remote.mqtt.MessageWrapper
+import de.konqi.roborockbridge.remote.mqtt.RequestMethod
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestWrapper
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.GetPropGetStatusResponse
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseDps
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseWrapper
+import de.konqi.roborockbridge.remote.mqtt.response.Protocol301
+import de.konqi.roborockbridge.remote.mqtt.response.MapDataWrapper
+import de.konqi.roborockbridge.remote.rest.HomeApi
+import de.konqi.roborockbridge.remote.rest.LoginApi
+import de.konqi.roborockbridge.remote.rest.UserApi
 import de.konqi.roborockbridge.utility.cast
 import jakarta.annotation.PreDestroy
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.annotation.Profile
 import org.springframework.context.event.EventListener
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import java.util.*
 
+@Component
+class BridgeDeviceStateManager(
+    @Autowired private val interpreterProvider: InterpreterProvider
+) {
+    private val deviceStates: MutableMap<String, BridgeDeviceState> = mutableMapOf()
+
+    fun updateDeviceState(device: Device) {
+        deviceStates[device.deviceId] =
+            interpreterProvider.getInterpreterForDevice(device)?.getState(device.state) ?: BridgeDeviceState.UNKNOWN
+    }
+
+    fun updateDeviceState(devices: List<Device>) {
+        devices.forEach(this::updateDeviceState)
+    }
+
+    fun updateDeviceState(deviceId: String, states: Map<String, Int>) {
+        deviceStates[deviceId] =
+            interpreterProvider.getInterpreterForDevice(deviceId)?.getState(states) ?: BridgeDeviceState.UNKNOWN
+    }
+
+    fun setDeviceState(deviceId: String, state: BridgeDeviceState) {
+        deviceStates[deviceId] = state
+    }
+
+    fun getDevicesInState(vararg state: BridgeDeviceState) =
+        deviceStates.filter { device -> state.any { it == device.value } }.keys
+}
 
 @Service
 @Profile("bridge")
@@ -40,7 +72,8 @@ class BridgeService(
     @Autowired private val roborockCredentials: RoborockCredentials,
     @Autowired private val bridgeMqtt: BridgeMqtt,
     @Autowired private val dataAccessLayer: DataAccessLayer,
-    @Autowired private val interpreterProvider: InterpreterProvider
+    @Autowired private val interpreterProvider: InterpreterProvider,
+    @Autowired private val bridgeDeviceStateManager: BridgeDeviceStateManager
 ) {
     private var run = true
 
@@ -57,11 +90,12 @@ class BridgeService(
 
         val rooms = dataAccessLayer.saveRooms(homeDetails, homeEntity)
 
-        val robots = dataAccessLayer.saveDevices(homeDetails, homeEntity)
+        val devices = dataAccessLayer.saveDevices(homeDetails, homeEntity)
+        bridgeDeviceStateManager.updateDeviceState(devices)
 
         // announce devices on mqtt broker
         bridgeMqtt.announceHome(homeEntity)
-        robots.map(DeviceForPublish::fromDeviceEntity).forEach { device ->
+        devices.map(DeviceForPublish::fromDeviceEntity).forEach { device ->
             bridgeMqtt.announceDevice(device)
             publishDeviceStatus(deviceId = device.deviceId)
         }
@@ -73,6 +107,23 @@ class BridgeService(
             dataAccessLayer.saveSchemas(schemasFromRoborock, homeEntity)
 
         bridgeMqtt.announceSchemas(schemas.map(SchemaForPublish::fromSchemaEntity))
+    }
+
+    @Scheduled(fixedDelay = 5_000)
+    fun mqttStatusPoll() {
+        bridgeDeviceStateManager.getDevicesInState(BridgeDeviceState.ACTIVE, BridgeDeviceState.ERROR_ACTIVE)
+            .forEach { deviceId ->
+                roborockMqtt.publishStatusRequest(deviceId)
+                roborockMqtt.publishMapRequest(deviceId)
+            }
+    }
+
+    @Scheduled(fixedDelay = 5 * 60_000)
+    fun restStatusPoll() {
+        dataAccessLayer.getHomes().forEach { home ->
+            val devices = dataAccessLayer.saveDevices(userApi.getUserHome(home.homeId), home)
+            bridgeDeviceStateManager.updateDeviceState(devices)
+        }
     }
 
     @EventListener(ApplicationReadyEvent::class)
@@ -121,6 +172,7 @@ class BridgeService(
                         val notifyAboutChangesAfter = Date()
                         val result = cast<Array<GetPropGetStatusResponse>>(payload.result).first()
                         dataAccessLayer.updateDeviceStates(message.deviceId, result.states)
+                        bridgeDeviceStateManager.updateDeviceState(message.deviceId, result.states)
 
                         // notify
                         publishDeviceStatus(message.deviceId, notifyAboutChangesAfter)
@@ -183,6 +235,7 @@ class BridgeService(
                         if (schemaId != null) {
                             logger.info("Requesting '$schemaId' schema cleanup via rest api.")
                             userApi.startCleanupSchema(schemaId)
+                            // TODO: Schema doesn't reference device, after starting a schema it might make sense to poll all devices
                         } else {
                             logger.warn("Command is missing argument 'schemaId'.")
                         }
