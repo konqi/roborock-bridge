@@ -23,4 +23,4 @@ interface DeviceStateRepository : CrudRepository<DeviceState, DeviceStateId> {
 
 }
 
-interface SchemaRepository : CrudRepository<Schema, Int>
+interface SchemaRepository : CrudRepository<Routine, Int>

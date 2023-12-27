@@ -14,7 +14,7 @@ class UserSchemasTest(@Autowired val objectMapper: ObjectMapper) {
     fun testDeserialize() {
         assertDoesNotThrow {
             val jsonString = String(Base64.getDecoder().decode(BLOB))
-            val userSchemas: UserApiResponseDto<List<UserSchema>> = objectMapper.readValue(jsonString)
+            val userSchemas: UserApiResponseDto<List<UserScenes>> = objectMapper.readValue(jsonString)
             println(userSchemas)
         }
     }

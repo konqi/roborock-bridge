@@ -1,0 +1,258 @@
+{
+  "statusCode": 200,
+  "body": {
+    "api": "获取家庭详细信息",
+    "result": {
+      "id": 4246547,
+      "name": "My Home",
+      "lon": null,
+      "lat": null,
+      "geoName": null,
+      "products": [
+        {
+          "id": "productIdOfRobot",
+          "name": "Roborock S8 Pro Ultra",
+          "model": "roborock.vacuum.a70",
+          "iconUrl": null,
+          "attribute": null,
+          "capability": 0,
+          "category": "robot.vacuum.cleaner",
+          "schema": [
+            {
+              "id": "101",
+              "name": "rpc_request",
+              "code": "rpc_request",
+              "mode": "rw",
+              "type": "RAW",
+              "property": null,
+              "desc": null
+            },
+            {
+              "id": "102",
+              "name": "rpc_response",
+              "code": "rpc_response",
+              "mode": "rw",
+              "type": "RAW",
+              "property": null,
+              "desc": null
+            },
+            {
+              "id": "120",
+              "name": "错误代码",
+              "code": "error_code",
+              "mode": "ro",
+              "type": "ENUM",
+              "property": "{\"range\": [\"\"]}",
+              "desc": null
+            },
+            {
+              "id": "121",
+              "name": "设备状态",
+              "code": "state",
+              "mode": "ro",
+              "type": "ENUM",
+              "property": "{\"range\": [\"\"]}",
+              "desc": null
+            },
+            {
+              "id": "122",
+              "name": "设备电量",
+              "code": "battery",
+              "mode": "ro",
+              "type": "ENUM",
+              "property": "{\"range\": [\"\"]}",
+              "desc": null
+            },
+            {
+              "id": "123",
+              "name": "清扫模式",
+              "code": "fan_power",
+              "mode": "rw",
+              "type": "ENUM",
+              "property": "{\"range\": [\"\"]}",
+              "desc": null
+            },
+            {
+              "id": "124",
+              "name": "拖地模式",
+              "code": "water_box_mode",
+              "mode": "rw",
+              "type": "ENUM",
+              "property": "{\"range\": [\"\"]}",
+              "desc": null
+            },
+            {
+              "id": "125",
+              "name": "主刷寿命",
+              "code": "main_brush_life",
+              "mode": "rw",
+              "type": "VALUE",
+              "property": "{\"max\": 100, \"min\": 0, \"step\": 1, \"unit\": \"null\", \"scale\": 1}",
+              "desc": null
+            },
+            {
+              "id": "126",
+              "name": "边刷寿命",
+              "code": "side_brush_life",
+              "mode": "rw",
+              "type": "VALUE",
+              "property": "{\"max\": 100, \"min\": 0, \"step\": 1, \"unit\": \"null\", \"scale\": 1}",
+              "desc": null
+            },
+            {
+              "id": "127",
+              "name": "滤网寿命",
+              "code": "filter_life",
+              "mode": "rw",
+              "type": "VALUE",
+              "property": "{\"max\": 100, \"min\": 0, \"step\": 1, \"unit\": \"null\", \"scale\": 1}",
+              "desc": null
+            },
+            {
+              "id": "128",
+              "name": "额外状态",
+              "code": "additional_props",
+              "mode": "ro",
+              "type": "RAW",
+              "property": null,
+              "desc": null
+            },
+            {
+              "id": "130",
+              "name": "完成事件",
+              "code": "task_complete",
+              "mode": "ro",
+              "type": "RAW",
+              "property": null,
+              "desc": null
+            },
+            {
+              "id": "131",
+              "name": "电量不足任务取消",
+              "code": "task_cancel_low_power",
+              "mode": "ro",
+              "type": "RAW",
+              "property": null,
+              "desc": null
+            },
+            {
+              "id": "132",
+              "name": "运动中任务取消",
+              "code": "task_cancel_in_motion",
+              "mode": "ro",
+              "type": "RAW",
+              "property": null,
+              "desc": null
+            },
+            {
+              "id": "133",
+              "name": "充电状态",
+              "code": "charge_status",
+              "mode": "ro",
+              "type": "RAW",
+              "property": null,
+              "desc": null
+            },
+            {
+              "id": "134",
+              "name": "烘干状态",
+              "code": "drying_status",
+              "mode": "ro",
+              "type": "RAW",
+              "property": null,
+              "desc": null
+            }
+          ]
+        }
+      ],
+      "devices": [
+        {
+          "duid": "{{ rand_bytes_22 }}",
+          "name": "Roborock S8 Pro Ultra",
+          "attribute": null,
+          "activeTime": 1682698283,
+          "localKey": "{{ rand_bytes_16 }}",
+          "runtimeEnv": null,
+          "timeZoneId": "Europe/Berlin",
+          "iconUrl": "",
+          "productId": "productIdOfRobot",
+          "lon": null,
+          "lat": null,
+          "share": false,
+          "shareTime": null,
+          "online": true,
+          "fv": "02.19.18",
+          "pv": "1.0",
+          "roomId": null,
+          "tuyaUuid": null,
+          "tuyaMigrated": false,
+          "extra": null,
+          "setting": null,
+          "sn": "R52EES{{ rand_int_10000000_99999999 }}",
+          "featureSet": "2247395306799103",
+          "newFeatureSet": "00000048009EFFFE",
+          "deviceStatus": {
+            "120": 0,
+            "121": 8,
+            "122": 100,
+            "123": 104,
+            "124": 203,
+            "125": 70,
+            "126": 60,
+            "127": 39,
+            "128": 0,
+            "133": 1,
+            "134": 0
+          },
+          "silentOtaSwitch": false,
+          "f": false
+        }
+      ],
+      "receivedDevices": [],
+      "rooms": [
+        {
+          "id": {{ rand_int_99999999 }},
+          "name": "Sunroom"
+        },
+        {
+          "id": {{ rand_int_99999999 }},
+          "name": "Master bedroom"
+        },
+        {
+          "id": {{ rand_int_99999999 }},
+          "name": "Bathroom1"
+        },
+        {
+          "id": {{ rand_int_99999999 }},
+          "name": "Kitchen"
+        },
+        {
+          "id": {{ rand_int_99999999 }},
+          "name": "Guest bedroom"
+        },
+        {
+          "id": {{ rand_int_99999999 }},
+          "name": "Bathroom"
+        },
+        {
+          "id": {{ rand_int_99999999 }},
+          "name": "Bedroom"
+        },
+        {
+          "id": {{ rand_int_99999999 }},
+          "name": "Corridor"
+        },
+        {
+          "id": {{ rand_int_99999999 }},
+          "name": "Study"
+        },
+        {
+          "id": {{ rand_int_99999999 }},
+          "name": "Living room"
+        }
+      ]
+    },
+    "status": "ok",
+    "success": true
+  }
+}

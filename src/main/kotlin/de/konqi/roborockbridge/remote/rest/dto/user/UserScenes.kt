@@ -12,30 +12,30 @@ import de.konqi.roborockbridge.utility.NestedJsonDeserializer
 import de.konqi.roborockbridge.utility.objectMapper
 import java.io.IOException
 
-internal class UserSchemasParamDeserializer : NestedJsonDeserializer<UserSchemaParam>(UserSchemaParam::class.java)
+internal class UserSchemasParamDeserializer : NestedJsonDeserializer<UserSceneParam>(UserSceneParam::class.java)
 
-data class UserSchema(
+data class UserScenes(
     val id: Int,
     val name: String,
     @JsonDeserialize(converter = UserSchemasParamDeserializer::class)
-    val param: UserSchemaParam,
+    val param: UserSceneParam,
     val enabled: Boolean,
     val extra: String?,
     val type: String
 )
 
-data class UserSchemaParam(
+data class UserSceneParam(
     val triggers: List<String>,
-    val action: UserSchemaAction,
+    val action: UserSceneAction,
     val matchType: String
 )
 
-data class UserSchemaAction(
+data class UserSceneAction(
     val type: String,
-    val items: List<UserSchemasParamActionItem>
+    val items: List<UserSceneParamActionItem>
 )
 
-data class UserSchemasParamActionItem(
+data class UserSceneParamActionItem(
     val id: Int,
     val type: String,
     val name: String,

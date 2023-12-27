@@ -32,6 +32,11 @@ dependencies {
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 //    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    // should use the -no-dependencies version, but logger configuration is broken in artifact
+    testImplementation("org.mock-server:mockserver-client-java:5.14.0")
+    testImplementation("org.testcontainers:testcontainers:1.19.3")
+    testImplementation("org.testcontainers:junit-jupiter:1.19.3")
+    testImplementation("org.testcontainers:mockserver:1.19.3")
 }
 
 tasks.withType<KotlinCompile> {
@@ -43,4 +48,6 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    jvmArgs("-Djavax.net.ssl.trustStore=src/test/resources/mockserver.jks")
+    jvmArgs("-Djavax.net.ssl.trustStorePassword=password")
 }

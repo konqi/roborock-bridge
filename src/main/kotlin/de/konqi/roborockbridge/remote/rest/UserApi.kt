@@ -5,7 +5,7 @@ import de.konqi.roborockbridge.remote.ProtocolUtils
 import de.konqi.roborockbridge.remote.RoborockCredentials
 import de.konqi.roborockbridge.remote.rest.dto.user.UserApiResponseDto
 import de.konqi.roborockbridge.remote.rest.dto.user.UserHomeData
-import de.konqi.roborockbridge.remote.rest.dto.user.UserSchema
+import de.konqi.roborockbridge.remote.rest.dto.user.UserScenes
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.ParameterizedTypeReference
@@ -19,7 +19,6 @@ import javax.crypto.spec.SecretKeySpec
 
 @Component
 class UserApiRestTemplate(@Autowired private val credentials: RoborockCredentials) : RestTemplate() {
-    // TODO This will not work - roborockData is late init
     private val hmacEncoder
         get() = Mac.getInstance("HmacSHA256").apply {
             init(SecretKeySpec(credentials.hmacKey?.toByteArray(), "HmacSHA256"))
@@ -44,7 +43,7 @@ class UserApiRestTemplate(@Autowired private val credentials: RoborockCredential
             credentials.userId, credentials.sessionId, nonce, timestamp, pathnameHash, queryParamsHash, bodyHash
         ).joinToString(":")
 
-        val mac = hMacEncode(value = signature)
+        val mac = hMacEncode(signature)
 
         val token = arrayOf(
             "id" to credentials.userId, "s" to credentials.sessionId, "ts" to timestamp, "nonce" to nonce, "mac" to mac
@@ -89,12 +88,12 @@ class UserApi(
         }
     }
 
-    fun getCleanupSchemas(homeId: Int): List<UserSchema> {
+    fun getCleanupScenes(homeId: Int): List<UserScenes> {
         val response = restTemplate.exchange(
             "${credentials.restApiRemote}${GET_SCENES_PATH}",
             HttpMethod.GET,
             null,
-            object : ParameterizedTypeReference<UserApiResponseDto<List<UserSchema>>>() {},
+            object : ParameterizedTypeReference<UserApiResponseDto<List<UserScenes>>>() {},
             mapOf(
                 "homeId" to homeId
             )
@@ -109,16 +108,18 @@ class UserApi(
         }
     }
 
-    fun startCleanupSchema(sceneId: Int) {
+    fun startCleanupSchema(sceneId: Int): Boolean {
         val response = restTemplate.exchange(
             "${credentials.restApiRemote}${POST_SCENE_EXECUTE_PATH}",
             HttpMethod.POST,
             null,
-            object : ParameterizedTypeReference<UserApiResponseDto<List<UserSchema>>>() {},
+            object : ParameterizedTypeReference<UserApiResponseDto<List<UserScenes>>>() {},
             mapOf(
                 "sceneId" to sceneId
             )
         )
+
+        return response.body?.success == true && response.body?.status == "ok"
     }
 
 

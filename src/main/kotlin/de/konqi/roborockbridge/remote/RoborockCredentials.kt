@@ -41,7 +41,6 @@ class RoborockCredentials(@Autowired private val objectMapper: ObjectMapper) {
     var hmacKey: String? = null
     var mqttKey: String? = null
     var sessionId: String? = null
-    var homeId: Int? = null
 
     @get:JsonIgnore
     val isConfigured: Boolean get() = username.isNotBlank() && password.isNotBlank()
@@ -72,7 +71,6 @@ class RoborockCredentials(@Autowired private val objectMapper: ObjectMapper) {
                 this.mqttKey = values["mqttKey"]
                 this.sessionId = values["sessionId"]
                 this.userId = values["userId"]
-                this.homeId = values["homeId"]?.toInt()
             }
         } catch (e: FileNotFoundException) {
             logger.info("Could not load credentials. No file '${CREDENTIAL_FILENAME}' found.")

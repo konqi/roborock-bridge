@@ -3,7 +3,7 @@ package de.konqi.roborockbridge.persistence
 import de.konqi.roborockbridge.persistence.entity.*
 import de.konqi.roborockbridge.remote.rest.dto.login.HomeDetailData
 import de.konqi.roborockbridge.remote.rest.dto.user.UserHomeData
-import de.konqi.roborockbridge.remote.rest.dto.user.UserSchema
+import de.konqi.roborockbridge.remote.rest.dto.user.UserScenes
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Component
 import java.util.*
@@ -16,17 +16,15 @@ class DataAccessLayer(
     private val schemaRepository: SchemaRepository,
     private val deviceStateRepository: DeviceStateRepository,
 ) {
-    fun saveSchemas(
-        schemasFromRoborock: List<UserSchema>, homeEntity: Home
-    ): MutableIterable<Schema> {
+    fun saveRoutines(
+        schemasFromRoborock: List<UserScenes>, homeEntity: Home
+    ): MutableIterable<Routine> {
         return schemaRepository.saveAll(schemasFromRoborock.map { schema ->
-            Schema(
-                home = homeEntity, schemaId = schema.id, name = schema.name
+            Routine(
+                home = homeEntity, routineId = schema.id, name = schema.name
             )
         })
-
     }
-
 
     fun saveRooms(
         homeDetails: UserHomeData, homeEntity: Home
@@ -34,7 +32,7 @@ class DataAccessLayer(
         return roomRepository.saveAll(homeDetails.rooms.map { Room(home = homeEntity, roomId = it.id, name = it.name) })
     }
 
-    fun getHomes() = homeRepository.findAll()
+    fun getHomes(): Iterable<Home> = homeRepository.findAll()
 
     fun saveHome(home: HomeDetailData): Home {
         return homeRepository.save(Home(homeId = home.rrHomeId, name = home.name))

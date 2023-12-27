@@ -102,9 +102,9 @@ class BridgeService(
 
         bridgeMqtt.announceRooms(rooms.toList())
 
-        val schemasFromRoborock = userApi.getCleanupSchemas(homeEntity.homeId)
+        val schemasFromRoborock = userApi.getCleanupScenes(homeEntity.homeId)
         val schemas =
-            dataAccessLayer.saveSchemas(schemasFromRoborock, homeEntity)
+            dataAccessLayer.saveRoutines(schemasFromRoborock, homeEntity)
 
         bridgeMqtt.announceSchemas(schemas.map(SchemaForPublish::fromSchemaEntity))
     }
