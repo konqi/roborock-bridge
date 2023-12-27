@@ -1,6 +1,6 @@
 package de.konqi.roborockbridge.remote.mqtt.raw
 
-import de.konqi.roborockbridge.LoggerDelegate
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.remote.ProtocolUtils
 import java.nio.ByteBuffer
 import javax.crypto.Cipher

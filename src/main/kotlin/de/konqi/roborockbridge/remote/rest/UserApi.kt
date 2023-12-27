@@ -1,6 +1,6 @@
 package de.konqi.roborockbridge.remote.rest
 
-import de.konqi.roborockbridge.LoggerDelegate
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.remote.ProtocolUtils
 import de.konqi.roborockbridge.remote.RoborockCredentials
 import de.konqi.roborockbridge.remote.rest.dto.user.UserApiResponseDto

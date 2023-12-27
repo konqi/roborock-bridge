@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge
+package de.konqi.roborockbridge.utility
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger

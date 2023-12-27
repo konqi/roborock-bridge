@@ -1,11 +1,7 @@
-package de.konqi.roborockbridge
+package de.konqi.roborockbridge.bridge
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.treeToValue
-import de.konqi.roborockbridge.bridge.DeviceForPublish
-import de.konqi.roborockbridge.bridge.DeviceStateForPublish
-import de.konqi.roborockbridge.bridge.MapDataForPublish
-import de.konqi.roborockbridge.bridge.SchemaForPublish
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.persistence.entity.Home
 import de.konqi.roborockbridge.persistence.entity.Room
 import de.konqi.roborockbridge.utility.CircularConcurrentLinkedQueue
@@ -24,15 +20,6 @@ import org.springframework.stereotype.Component
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
-enum class CommandType(val value: String) {
-    GET("get"), SET("set"), ACTION("action");
-
-    companion object {
-        private val mapping = CommandType.entries.associateBy(CommandType::value)
-        fun fromValue(value: String) = CommandType.mapping[value]
-    }
-}
-
 data class Message(
     val topic: String,
     val message: ByteArray,
@@ -40,31 +27,13 @@ data class Message(
     val retained: Boolean = false
 )
 
-enum class ActionEnum(val value: String) {
-    HOME("home"),
-    START_SCHEMA("start_schema"),
-    UNKNOWN("unknown");
-
-    companion object {
-        private val mapping = ActionEnum.entries.associateBy(ActionEnum::value)
-        fun fromValue(value: String?) = ActionEnum.mapping[value] ?: UNKNOWN
-    }
-}
-
-// need to specify target bridge / home / device
-enum class TargetType {
-    BRIDGE,
-    HOME,
-    DEVICE
-}
-
-data class Target(val type: TargetType, val identifier: String?)
+data class Target(val type: TargetType, val identifier: String)
 
 abstract class Command(
     val target: Target
 )
 
-class ActionCommand(target: Target, val action: ActionEnum, val arguments: Map<String, String> = emptyMap()) :
+class ActionCommand(target: Target, val actionKeyword: ActionKeywordsEnum = ActionKeywordsEnum.UNKNOWN) :
     Command(target)
 
 class GetCommand(target: Target, val parameters: List<String> = emptyList()) : Command(target)
@@ -79,7 +48,8 @@ data class BridgeMqttConfig(
 @Profile("bridge")
 @EnableConfigurationProperties(BridgeMqttConfig::class)
 class BridgeMqtt(
-    @Autowired private val bridgeMqttConfig: BridgeMqttConfig, @Autowired private val objectMapper: ObjectMapper
+    @Autowired private val bridgeMqttConfig: BridgeMqttConfig, @Autowired private val objectMapper: ObjectMapper,
+    @Autowired private val receivedMessageParser: ReceivedMessageParser
 ) {
     val mqttClient = MqttClient(bridgeMqttConfig.url, bridgeMqttConfig.clientId, null)
     val outboundMessagesQueue: Queue<Message> = ConcurrentLinkedQueue()
@@ -98,11 +68,11 @@ class BridgeMqtt(
                 }
 
                 override fun messageArrived(topic: String?, message: MqttMessage?) {
-                    logger.info("New message for topic '$topic'")
+                    logger.debug("New message for topic '$topic'")
                 }
 
                 override fun deliveryComplete(token: org.eclipse.paho.client.mqttv3.IMqttDeliveryToken?) {
-                    logger.warn("Message delivered")
+                    logger.debug("Message delivered")
                 }
             })
 
@@ -122,94 +92,46 @@ class BridgeMqtt(
         }
     }
 
-    private final fun sectionRegex(sectionName: String, valuePattern: String = "[^/]+"): String {
-        return "(?:(?:$sectionName)/(?<$sectionName>$valuePattern))"
-    }
-
-    val deviceIdExtractionRegex = Regex(
-        "${Regex.escape(bridgeMqttConfig.baseTopic)}(?:/(?:${
-            sectionRegex(
-                HOME,
-                "[0-9]+"
-            )
-        }|${sectionRegex(DEVICE)}))*(?:/(?<surplus>.*))?"
-    )
-
-    fun parseTopic(topic: String): Map<String, String?> {
-        val matches = deviceIdExtractionRegex.find(topic)
-
-        return mapOf(
-            HOME_ID to matches?.groups?.get(HOME)?.value,
-            DEVICE_ID to matches?.groups?.get(DEVICE)?.value,
-            "surplus" to matches?.groups?.get("surplus")?.value
-        )
-    }
-
     fun handleMessage(topic: String, message: MqttMessage) {
-        if (!CommandType.entries.any {
-                topic.endsWith(it.value)
-            }) {
-            logger.debug("Topic '$topic' is not a command, ignoring it.")
-            return
-        }
+        val msg = receivedMessageParser.parse(topic, message.payload)
+        when (msg.command) {
+            CommandType.UNKNOWN -> {
+                logger.debug("Topic '$topic' is not a command, ignoring it.")
+            }
 
-        val topicParams = parseTopic(topic)
-        val homeId = topicParams[HOME_ID]?.toInt()
-        val deviceId = topicParams[DEVICE_ID]
-        val surplus = topicParams["surplus"] ?: ""
-        val cmdStr = surplus.split("/").last()
-        val cmd = CommandType.fromValue(cmdStr)
-        val properties = surplus.split("/").let {
-            val indexOfParams = it.indexOf(deviceId) + 1
-            it.slice(indexOfParams..<it.size - 1)
-        }
-        val messageBody = try {
-            objectMapper.readTree(message.payload)
-        } catch (e: Exception) {
-            // notify about invalid message
-            log("Could not parse message '${String(message.payload)}'.", homeId, deviceId)
-            null
-        }
-
-        logger.info("Received message for home '$homeId', device '$deviceId' with command '$cmd'")
-
-        when (cmd) {
             CommandType.ACTION -> {
-                val args = messageBody?.get("args")
+                if (msg.targetIdentifier == null) {
+                    logger.warn("Unable to determine command recipient.")
+                } else {
+                    logger.info("Received action command for ${msg.targetType} '${msg.targetIdentifier}'.")
 
-                inboundMessagesQueue.add(
-                    ActionCommand(
-                        action = ActionEnum.fromValue(
-                            messageBody?.get("action")?.textValue()
-                        ),
-                        arguments = if (args != null) objectMapper.treeToValue<Map<String, String>>(args) else emptyMap(),
-                        target = Target(
-                            type = TargetType.DEVICE,
-                            identifier = deviceId
+                    inboundMessagesQueue.add(
+                        ActionCommand(
+                            target = Target(
+                                type = msg.targetType,
+                                identifier = msg.targetIdentifier
+                            ),
+                            actionKeyword = msg.actionKeyword
                         )
                     )
-                )
+                }
             }
 
             CommandType.GET -> {
-                val (targetType, targetIdentifier) = if (deviceId != null) {
-                    TargetType.DEVICE to deviceId
-                } else if (homeId != null) {
-                    TargetType.HOME to homeId.toString()
+                if (msg.targetIdentifier == null) {
+                    logger.warn("Unable to determine command recipient.")
                 } else {
-                    TargetType.BRIDGE to null
-                }
-
-                inboundMessagesQueue.add(
-                    GetCommand(
-                        target = Target(type = targetType, identifier = targetIdentifier),
-                        parameters = properties
+                    inboundMessagesQueue.add(
+                        GetCommand(
+                            target = Target(type = msg.targetType, identifier = msg.targetIdentifier),
+//                        parameters = properties
+                        )
                     )
-                )
+                }
             }
 
             else -> {
-                log("Received unknown command '$cmdStr'.")
+                log("Command '${msg.command}' not implemented.")
             }
         }
     }
@@ -335,9 +257,11 @@ class BridgeMqtt(
         const val DEVICE = "device"
         const val DEVICE_ID = "deviceId"
         const val PROPERTY = "property"
-        const val COMMAND = "command"
         const val HOME = "home"
         const val HOME_ID = "homeId"
+        const val ROUTINE = "routine"
+        const val ROUTINE_ID = "routineId"
+        const val COMMAND = "command"
 
         //        const val ROOM = "room"
 //        const val ROOM_ID = "roomId"
@@ -346,13 +270,13 @@ class BridgeMqtt(
         const val DEVICE_TOPIC_PARTIAL = "$DEVICE/{$DEVICE_ID}"
 
         //        const val ROOM_TOPIC_PARTIAL = "$ROOM/{$ROOM_ID}"
-        const val HOME_TOPIC = "{$BASE_TOPIC}/${HOME_TOPIC_PARTIAL}"
-        const val ROOM_TOPIC = "${HOME_TOPIC}/rooms"
-        const val SCHEMA_TOPIC = "${HOME_TOPIC}/schemas"
-        const val DEVICE_TOPIC = "${HOME_TOPIC}/${DEVICE_TOPIC_PARTIAL}"
-        const val DEVICE_PROPERTY_TOPIC = "${DEVICE_TOPIC}/{$PROPERTY}"
-        const val DEVICE_PROPERTY_COMMAND_TOPIC = "${DEVICE_PROPERTY_TOPIC}/{$COMMAND}"
-        const val DEVICE_LOG_TOPIC = "${DEVICE_TOPIC}/$LOG"
+        const val HOME_TOPIC = "{$BASE_TOPIC}/$HOME_TOPIC_PARTIAL"
+        const val ROOM_TOPIC = "$HOME_TOPIC/rooms"
+        const val SCHEMA_TOPIC = "$HOME_TOPIC/schemas"
+        const val DEVICE_TOPIC = "$HOME_TOPIC/$DEVICE_TOPIC_PARTIAL"
+        const val DEVICE_PROPERTY_TOPIC = "$DEVICE_TOPIC/{$PROPERTY}"
+        const val DEVICE_PROPERTY_COMMAND_TOPIC = "$DEVICE_PROPERTY_TOPIC/{$COMMAND}"
+        const val DEVICE_LOG_TOPIC = "$DEVICE_TOPIC/$LOG"
         const val BRIDGE_LOG_TOPIC = "{$BASE_TOPIC}/$LOG"
     }
 }

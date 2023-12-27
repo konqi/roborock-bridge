@@ -3,7 +3,7 @@ package de.konqi.roborockbridge.remote.mqtt
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import de.konqi.roborockbridge.LoggerDelegate
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.persistence.DeviceRepository
 import de.konqi.roborockbridge.remote.helper.RequestMemory
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestWrapper

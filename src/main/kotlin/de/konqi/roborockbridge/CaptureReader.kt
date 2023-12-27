@@ -20,6 +20,7 @@ import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseDps
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseWrapper
 import de.konqi.roborockbridge.remote.mqtt.response.MapDataWrapper
 import de.konqi.roborockbridge.remote.mqtt.response.Protocol301
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.utility.cast
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.ApplicationArguments

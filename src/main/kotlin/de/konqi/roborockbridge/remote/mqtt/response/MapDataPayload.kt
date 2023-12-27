@@ -1,6 +1,6 @@
 package de.konqi.roborockbridge.remote.mqtt.response
 
-import de.konqi.roborockbridge.LoggerDelegate
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.remote.mqtt.response.map.*
 
 data class MapDataPayload(

@@ -1,9 +1,6 @@
 package de.konqi.roborockbridge
 
-import de.konqi.roborockbridge.bridge.DeviceForPublish
-import de.konqi.roborockbridge.bridge.DeviceStateForPublish
-import de.konqi.roborockbridge.bridge.MapDataForPublish
-import de.konqi.roborockbridge.bridge.SchemaForPublish
+import de.konqi.roborockbridge.bridge.*
 import de.konqi.roborockbridge.bridge.interpreter.BridgeDeviceState
 import de.konqi.roborockbridge.bridge.interpreter.InterpreterProvider
 import de.konqi.roborockbridge.bridge.interpreter.getState
@@ -23,6 +20,7 @@ import de.konqi.roborockbridge.remote.mqtt.response.MapDataWrapper
 import de.konqi.roborockbridge.remote.rest.HomeApi
 import de.konqi.roborockbridge.remote.rest.LoginApi
 import de.konqi.roborockbridge.remote.rest.UserApi
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.utility.cast
 import jakarta.annotation.PreDestroy
 import org.springframework.beans.factory.annotation.Autowired
@@ -221,31 +219,33 @@ class BridgeService(
         while (bridgeMqtt.inboundMessagesQueue.size > 0) {
             when (val command = bridgeMqtt.inboundMessagesQueue.remove()) {
                 is ActionCommand -> {
-                    if (command.action == ActionEnum.HOME &&
-                        command.target.type == TargetType.DEVICE &&
-                        !command.target.identifier.isNullOrBlank()
-                    ) {
-                        logger.info("Requesting device '${command.target.identifier}' to return to dock via mqtt.")
-                        roborockMqtt.publishRequest(command.target.identifier, RequestMethod.APP_CHARGE)
-                    } else if (command.action == ActionEnum.START_SCHEMA &&
-                        command.target.type == TargetType.DEVICE &&
-                        !command.target.identifier.isNullOrBlank()
-                    ) {
-                        val schemaId = command.arguments["schemaId"]?.toInt()
-                        if (schemaId != null) {
-                            logger.info("Requesting '$schemaId' schema cleanup via rest api.")
-                            userApi.startCleanupSchema(schemaId)
-                            // TODO: Schema doesn't reference device, after starting a schema it might make sense to poll all devices
-                        } else {
-                            logger.warn("Command is missing argument 'schemaId'.")
+                    when (command.target.type) {
+                        TargetType.DEVICE -> {
+                            when (command.actionKeyword) {
+                                ActionKeywordsEnum.HOME -> {
+                                    logger.info("Requesting device '${command.target.identifier}' to return to dock via mqtt.")
+                                    roborockMqtt.publishRequest(command.target.identifier, RequestMethod.APP_CHARGE)
+                                }
+
+                                else -> {
+                                    logger.warn("currently only 'home' is a valid argument for device action.")
+                                }
+                            }
                         }
-                    } else {
-                        logger.warn("ActionCommand (targetType=${command.target.type},action=${command.action.value}) type not implemented")
+
+                        TargetType.ROUTINE -> {
+                            logger.info("Requesting cleanup routine '${command.target.identifier}' via rest api.")
+                            userApi.startCleanupSchema(command.target.identifier.toInt())
+                        }
+
+                        else -> {
+                            logger.warn("ActionCommand (targetType=${command.target.type}, actionKeyword=${command.actionKeyword}) type not implemented")
+                        }
                     }
                 }
 
                 is GetCommand -> {
-                    if (command.target.type == TargetType.DEVICE && !command.target.identifier.isNullOrEmpty()) {
+                    if (command.target.type == TargetType.DEVICE && command.target.identifier.isNotEmpty()) {
                         if (command.parameters.first() == "status") {
                             logger.info("Requesting device state refresh via mqtt.")
                             roborockMqtt.publishStatusRequest(command.target.identifier)
@@ -253,7 +253,7 @@ class BridgeService(
                             logger.info("Requesting device map via mqtt.")
                             roborockMqtt.publishMapRequest(command.target.identifier)
                         }
-                    } else if (command.target.type == TargetType.HOME && !command.target.identifier.isNullOrEmpty()) {
+                    } else if (command.target.type == TargetType.HOME && command.target.identifier.isNotEmpty()) {
                         logger.info("Refreshing home details via rest api.")
                         init()
                     } else {

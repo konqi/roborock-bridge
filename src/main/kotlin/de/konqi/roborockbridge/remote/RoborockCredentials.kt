@@ -3,7 +3,7 @@ package de.konqi.roborockbridge.remote
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import de.konqi.roborockbridge.LoggerDelegate
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.remote.rest.dto.login.Rriot
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy

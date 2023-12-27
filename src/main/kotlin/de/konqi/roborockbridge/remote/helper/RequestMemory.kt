@@ -1,6 +1,6 @@
 package de.konqi.roborockbridge.remote.helper
 
-import de.konqi.roborockbridge.LoggerDelegate
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.remote.mqtt.RequestMethod
 import de.konqi.roborockbridge.utility.pollLastEntry
 import org.springframework.stereotype.Component
