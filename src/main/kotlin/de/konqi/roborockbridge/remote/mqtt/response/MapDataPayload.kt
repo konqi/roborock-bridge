@@ -32,7 +32,7 @@ data class MapDataPayload(
             var currentlyCleanedZones: MapDataRectangles<UShort>? = null
             var noGoAreas: MapDataArea<UShort>? = null
             var noMoppingArea: MapDataArea<UShort>? = null
-            val obstacles: List<Obstacle<UShort>> = mutableListOf()
+            val obstacles: MutableList<Obstacle<UShort>> = mutableListOf()
 
 
             val mapData = MapData(data)
@@ -64,7 +64,7 @@ data class MapDataPayload(
                         // TODO
                         val obstacle = MapDataObstacle.fromRawMapDataSection(section)
                         if (obstacle.numberOfObstacles > 0u) {
-                            obstacle.obstacles.forEach(obstacles::addLast)
+                            obstacle.obstacles.forEach(obstacles::add)
                         }
                     }
 

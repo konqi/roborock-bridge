@@ -2,6 +2,7 @@ package de.konqi.roborockbridge.remote.helper
 
 import de.konqi.roborockbridge.LoggerDelegate
 import de.konqi.roborockbridge.remote.mqtt.RequestMethod
+import de.konqi.roborockbridge.utility.pollLastEntry
 import org.springframework.stereotype.Component
 import java.util.*
 import kotlin.collections.LinkedHashMap
@@ -21,9 +22,9 @@ class RequestMemory {
             val lost = memory.pollLastEntry()
             logger.warn(
                 "Request {} with method '{}' evicted after {} ms",
-                lost.key,
-                lost.value.method,
-                Date().time - lost.value.requestTimeMs
+                lost.first,
+                lost.second.method,
+                Date().time - lost.second.requestTimeMs
             )
         }
         return memory.put(key, value)
