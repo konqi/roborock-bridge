@@ -40,7 +40,28 @@ enum class PixelType {
     OBSTACLE_ROOM_13,
     OBSTACLE_ROOM_14,
     OBSTACLE_ROOM_15,
-    OTHER
+    OTHER;
+
+    companion object {
+        val ROOMS = listOf(
+            OBSTACLE_ROOM_0,
+            OBSTACLE_ROOM_1,
+            OBSTACLE_ROOM_2,
+            OBSTACLE_ROOM_3,
+            OBSTACLE_ROOM_4,
+            OBSTACLE_ROOM_5,
+            OBSTACLE_ROOM_6,
+            OBSTACLE_ROOM_7,
+            OBSTACLE_ROOM_8,
+            OBSTACLE_ROOM_9,
+            OBSTACLE_ROOM_10,
+            OBSTACLE_ROOM_11,
+            OBSTACLE_ROOM_12,
+            OBSTACLE_ROOM_13,
+            OBSTACLE_ROOM_14,
+            OBSTACLE_ROOM_15
+        )
+    }
 }
 
 class MapDataImage(data: MapDataSection) {
@@ -83,9 +104,73 @@ class MapDataImage(data: MapDataSection) {
         }
     }
 
-    private fun getImageProjection(palette: Map<PixelType, Color> = DEFAULT_PALETTE): BufferedImage {
+    /**
+     * Determines connections between rooms
+     *
+     * <strong>Note:</strong> It is difficult determine the location of the adjoining rooms (e.g. above, left)
+     * because some pixels are wildly off (mirrors, glass, etc.), also this information is not strictly necessary
+     * to draw a map where two adjoining rooms don't use the same color
+     */
+    private fun detectRoomConnections(): Map<PixelType, MutableSet<PixelType>> {
+        val roomConnections = PixelType.ROOMS.associateWith { mutableSetOf<PixelType>() }
+
+        val putIfConnected = { otherPixelType: PixelType,
+                               pixelType: PixelType ->
+            if (PixelType.ROOMS.contains(otherPixelType) && pixelType != otherPixelType) {
+                roomConnections[pixelType]!!.add(otherPixelType)
+            }
+        }
+
+        bitmap.forEachIndexed { y, row ->
+            row.forEachIndexed { x, pixelType ->
+                if (PixelType.ROOMS.contains(pixelType)) {
+                    if (x > 0) {
+                        val otherPixelType = bitmap[y][x - 1]
+                        putIfConnected(otherPixelType, pixelType)
+                    }
+                    if (y > 0) {
+                        val otherPixelType = bitmap[y - 1][x]
+                        putIfConnected(otherPixelType, pixelType)
+                    }
+                }
+            }
+        }
+
+        // make connections bi-directional
+        roomConnections.forEach {
+            it.value.forEach { other -> roomConnections[other]!!.add(it.key) }
+        }
+
+        return roomConnections
+    }
+
+    private fun createDynamicPalette(roomColors: List<Color> = DEFAULT_ROOM_PALETTE): Map<PixelType, Color> {
+        val dynamicPalette: MutableMap<PixelType, Color> = mutableMapOf()
+
+        val roomConnections = detectRoomConnections()
+        roomConnections.forEach { (currentRoomId, connectedRooms) ->
+            // find colors that are not in use by connected rooms
+            val colorsUsedByConnectedRooms = connectedRooms.mapNotNull { dynamicPalette[it] }
+            val possibleColors = roomColors.filter { it !in colorsUsedByConnectedRooms }
+            // when all colors are taken then there are only bad choices (also congrats to your home)
+            dynamicPalette[currentRoomId] = if (possibleColors.isNotEmpty()) {
+                possibleColors[currentRoomId.ordinal % possibleColors.size]
+            } else {
+                roomColors[currentRoomId.ordinal % roomColors.size]
+            }
+        }
+
+        return dynamicPalette
+    }
+
+    private fun getImageProjection(
+        wallColor: Color = RR_GRAY,
+        roomColors: List<Color> = DEFAULT_ROOM_PALETTE
+    ): BufferedImage {
+        val palette = mapOf(PixelType.OBSTACLE_WALL_V2 to wallColor).plus(createDynamicPalette(roomColors))
+
         return BufferedImage(width.toInt(), height.toInt(), BufferedImage.TRANSLUCENT).also { img ->
-            bitmap.reversed().forEachIndexed { y, row ->
+            bitmap.forEachIndexed { y, row ->
                 row.forEachIndexed { x, pix ->
                     if (palette.containsKey(pix)) {
                         img.setRGB(x, y, palette[pix]!!.rgb)
@@ -95,10 +180,14 @@ class MapDataImage(data: MapDataSection) {
         }
     }
 
-    fun getImageBytes(palette: Map<PixelType, Color> = DEFAULT_PALETTE, formatName: String = "png"): ByteArray {
+    fun getImageBytes(
+        wallColor: Color = RR_GRAY,
+        roomColors: List<Color> = DEFAULT_ROOM_PALETTE,
+        formatName: String = "png"
+    ): ByteArray {
         return ByteArrayOutputStream().use { os ->
             ImageIO.write(
-                getImageProjection(palette),
+                getImageProjection(wallColor, roomColors),
                 formatName,
                 os
             )
@@ -106,8 +195,14 @@ class MapDataImage(data: MapDataSection) {
         }
     }
 
-    fun getImageDataUrl(palette: Map<PixelType, Color> = DEFAULT_PALETTE, formatName: String = "png"): String {
-        return "data:image/$formatName;base64,${Base64.getEncoder().encodeToString(getImageBytes(palette, formatName))}"
+    fun getImageDataUrl(
+        wallColor: Color = RR_GRAY,
+        roomColors: List<Color> = DEFAULT_ROOM_PALETTE,
+        formatName: String = "png"
+    ): String {
+        return "data:image/$formatName;base64,${
+            Base64.getEncoder().encodeToString(getImageBytes(wallColor, roomColors, formatName))
+        }"
     }
 
     companion object {
@@ -128,24 +223,6 @@ class MapDataImage(data: MapDataSection) {
         val RR_BLUE = Color(130, 190, 255)
         val RR_GRAY = Color(109, 110, 112)
 
-        val DEFAULT_PALETTE: Map<PixelType, Color> = mapOf(
-            PixelType.OBSTACLE_WALL_V2 to RR_GRAY,
-            PixelType.OBSTACLE_ROOM_0 to RR_BLUE,
-            PixelType.OBSTACLE_ROOM_1 to RR_ORANGE,
-            PixelType.OBSTACLE_ROOM_2 to RR_GREEN,
-            PixelType.OBSTACLE_ROOM_3 to RR_YELLOW,
-            PixelType.OBSTACLE_ROOM_4 to RR_BLUE,
-            PixelType.OBSTACLE_ROOM_5 to RR_ORANGE,
-            PixelType.OBSTACLE_ROOM_6 to RR_GREEN,
-            PixelType.OBSTACLE_ROOM_7 to RR_YELLOW,
-            PixelType.OBSTACLE_ROOM_8 to RR_BLUE,
-            PixelType.OBSTACLE_ROOM_9 to RR_ORANGE,
-            PixelType.OBSTACLE_ROOM_10 to RR_GREEN,
-            PixelType.OBSTACLE_ROOM_11 to RR_YELLOW,
-            PixelType.OBSTACLE_ROOM_12 to RR_BLUE,
-            PixelType.OBSTACLE_ROOM_13 to RR_ORANGE,
-            PixelType.OBSTACLE_ROOM_14 to RR_GREEN,
-            PixelType.OBSTACLE_ROOM_15 to RR_YELLOW,
-        )
+        val DEFAULT_ROOM_PALETTE = listOf(RR_BLUE, RR_ORANGE, RR_GREEN, RR_YELLOW)
     }
 }

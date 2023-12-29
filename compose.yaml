@@ -3,16 +3,12 @@ services:
     image: eclipse-mosquitto
     ports:
       - "1883:1883"
+      - "1884:1884"
       - "9001:9001"
     volumes:
       - type: bind
         source: mosquitto.conf
         target: /mosquitto/config/mosquitto.conf
-#  wiremock:
-#    image: wiremock/wiremock
-#    ports:
-#      - "8080:8080"
-#    command: --disable-http --https-port 8080
   mockserver:
     image: mockserver/mockserver:5.14.0
     ports:

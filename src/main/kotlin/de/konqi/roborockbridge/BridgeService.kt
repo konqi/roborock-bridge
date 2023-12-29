@@ -178,17 +178,10 @@ class BridgeService(
                 }
 
                 MapDataWrapper.SCHEMA_TYPE -> {
-                    val payload = cast<MessageWrapper<Protocol301>>(message).payload
+                    val mapDataPayload = cast<MessageWrapper<Protocol301>>(message).payload.payload
 
                     val homeId = dataAccessLayer.getDevice(message.deviceId).get().home.homeId
-                    val mapData = MapDataForPublish(
-                        map = payload.payload.map?.getImageDataUrl(),
-                        robotPosition = payload.payload.robotPosition,
-                        chargerPosition = payload.payload.chargerPosition,
-                        gotoPath = payload.payload.gotoPath?.points,
-                        path = payload.payload.path?.points,
-                        predictedPath = payload.payload.predictedPath?.points
-                    )
+                    val mapData = MapDataForPublish.fromProtocol301Payload(mapDataPayload)
                     bridgeMqtt.publishMapData(homeId = homeId, deviceId = message.deviceId, mapData)
                 }
 
@@ -246,10 +239,10 @@ class BridgeService(
 
                 is GetCommand -> {
                     if (command.target.type == TargetType.DEVICE && command.target.identifier.isNotEmpty()) {
-                        if (command.parameters.first() == "status") {
+                        if (command.actionKeyword == ActionKeywordsEnum.STATUS) {
                             logger.info("Requesting device state refresh via mqtt.")
                             roborockMqtt.publishStatusRequest(command.target.identifier)
-                        } else if (command.parameters.first() == "map") {
+                        } else if (command.actionKeyword == ActionKeywordsEnum.MAP) {
                             logger.info("Requesting device map via mqtt.")
                             roborockMqtt.publishMapRequest(command.target.identifier)
                         }
@@ -258,11 +251,7 @@ class BridgeService(
                         init()
                     } else {
                         logger.warn(
-                            "GetCommand type (targetType=${command.target.type},parameters=[${
-                                command.parameters.joinToString(
-                                    ","
-                                )
-                            }]) not implemented"
+                            "GetCommand type (targetType=${command.target.type}) not implemented"
                         )
                     }
                 }

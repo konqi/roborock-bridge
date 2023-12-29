@@ -1,6 +1,7 @@
 package de.konqi.roborockbridge.bridge
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
 
 enum class CommandType(val value: String) {
@@ -32,6 +33,8 @@ enum class CommandType(val value: String) {
 
 enum class ActionKeywordsEnum(val value: String) {
     HOME("home"),
+    MAP("map"),
+    STATUS("status"),
     UNKNOWN("unknown");
 
     companion object {
@@ -65,6 +68,7 @@ data class ReceivedMessage(
 }
 
 @Service
+@Profile("bridge")
 class ReceivedMessageParser(
     @Autowired private val bridgeMqttConfig: BridgeMqttConfig
 ) {
@@ -72,13 +76,19 @@ class ReceivedMessageParser(
         return "(?:(?:$sectionName)/(?<$sectionName>$valuePattern))"
     }
 
+    private fun combineSections(vararg sections: String) = """(?:/(?:${sections.joinToString("|")}))*"""
+
     val deviceIdExtractionRegex = Regex(
-        "${Regex.escape(bridgeMqttConfig.baseTopic)}(?:/(?:${
-            sectionRegex(
-                BridgeMqtt.HOME,
-                "[0-9]+"
+        "${Regex.escape(bridgeMqttConfig.baseTopic)}${
+            combineSections(
+                sectionRegex(
+                    BridgeMqtt.HOME,
+                    "[0-9]+"
+                ),
+                sectionRegex(BridgeMqtt.DEVICE),
+                sectionRegex(BridgeMqtt.ROUTINE)
             )
-        }|${sectionRegex(BridgeMqtt.DEVICE)}))*(?:/(?<surplus>.*))?"
+        }(?:/(?<surplus>.*))?"
     )
 
     fun parse(topic: String, payload: ByteArray): ReceivedMessage {
@@ -86,6 +96,7 @@ class ReceivedMessageParser(
 
         val surplus = matches?.groups?.get("surplus")?.value?.split("/")
         val parameters = String(payload).trim()
+
         return ReceivedMessage(
             homeId = matches?.groups?.get(BridgeMqtt.HOME)?.value?.toInt(),
             deviceId = matches?.groups?.get(BridgeMqtt.DEVICE)?.value,
@@ -93,7 +104,6 @@ class ReceivedMessageParser(
             command = CommandType.fromValue(surplus?.last()),
             parameters = parameters,
             actionKeyword = ActionKeywordsEnum.fromValue(parameters)
-
         )
     }
 }

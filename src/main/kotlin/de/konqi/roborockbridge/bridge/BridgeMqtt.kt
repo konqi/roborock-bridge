@@ -1,10 +1,10 @@
 package de.konqi.roborockbridge.bridge
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.persistence.entity.Home
 import de.konqi.roborockbridge.persistence.entity.Room
 import de.konqi.roborockbridge.utility.CircularConcurrentLinkedQueue
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.utility.camelToSnakeCase
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
@@ -36,7 +36,7 @@ abstract class Command(
 class ActionCommand(target: Target, val actionKeyword: ActionKeywordsEnum = ActionKeywordsEnum.UNKNOWN) :
     Command(target)
 
-class GetCommand(target: Target, val parameters: List<String> = emptyList()) : Command(target)
+class GetCommand(target: Target, val actionKeyword: ActionKeywordsEnum = ActionKeywordsEnum.UNKNOWN) : Command(target)
 
 
 @ConfigurationProperties(prefix = "bridge-mqtt")
@@ -124,7 +124,7 @@ class BridgeMqtt(
                     inboundMessagesQueue.add(
                         GetCommand(
                             target = Target(type = msg.targetType, identifier = msg.targetIdentifier),
-//                        parameters = properties
+                            actionKeyword = msg.actionKeyword
                         )
                     )
                 }
@@ -204,12 +204,18 @@ class BridgeMqtt(
 //        mqttClient.publish(topic, payload, 0, false)
 //    }
 
-    fun publishMapData(homeId: Int, deviceId: String, payload: MapDataForPublish) {
-        payload.getFields().forEach {
-            val sectionData = payload[it]
+    fun publishMapData(homeId: Int, deviceId: String, mapData: MapDataForPublish) {
+        mapData.getFields().forEach {
+            val sectionData = mapData[it]
             val name = it.camelToSnakeCase()
             val topic = getPropertyTopic(homeId, deviceId, name)
-            mqttClient.publish(topic, objectMapper.writeValueAsBytes(sectionData), 0, false)
+            val payload = if (sectionData is String) {
+                sectionData.toByteArray()
+            } else {
+                objectMapper.writeValueAsBytes(sectionData)
+            }
+
+            mqttClient.publish(topic, payload, 0, false)
         }
     }
 
