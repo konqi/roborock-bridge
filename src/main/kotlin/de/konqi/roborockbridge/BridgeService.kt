@@ -104,7 +104,7 @@ class BridgeService(
         val schemas =
             dataAccessLayer.saveRoutines(schemasFromRoborock, homeEntity)
 
-        bridgeMqtt.announceSchemas(schemas.map(SchemaForPublish::fromSchemaEntity))
+        bridgeMqtt.announceRoutines(schemas.map(SchemaForPublish::fromSchemaEntity))
     }
 
     @Scheduled(fixedDelay = 5_000)

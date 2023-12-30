@@ -1,7 +1,6 @@
 package de.konqi.roborockbridge.bridge
 
 import de.konqi.roborockbridge.remote.mqtt.response.MapDataPayload
-import de.konqi.roborockbridge.remote.mqtt.response.Protocol301
 import de.konqi.roborockbridge.remote.mqtt.response.map.Coordinate
 import kotlin.reflect.full.declaredMemberProperties
 
@@ -12,7 +11,7 @@ data class MapDataForPublish(
     val path: List<Coordinate<Float>>?,
     val gotoPath: List<Coordinate<Float>>?,
     val predictedPath: List<Coordinate<Float>>?,
-    val virtualWalls: List<Pair<Coordinate<Float>, Coordinate<Float>>>
+    val virtualWalls: List<List<Coordinate<Float>>>
 ) {
     operator fun get(name: String): Any? {
         return fieldNames[name]?.invoke(this)
@@ -30,7 +29,7 @@ data class MapDataForPublish(
             gotoPath = payload.gotoPath?.points,
             path = payload.path?.points,
             predictedPath = payload.predictedPath?.points,
-            virtualWalls = payload.virtualWalls?.zones?.map { it.start to it.end } ?: listOf()
+            virtualWalls = payload.virtualWalls?.zones?.map { listOf(it.start, it.end) } ?: listOf()
         )
     }
 }
