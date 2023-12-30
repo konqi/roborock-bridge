@@ -13,8 +13,10 @@ class MapDataForPublishTest {
         path = listOf(),
         predictedPath = listOf(),
         gotoPath = listOf(),
-        virtualWalls = listOf(Coordinate(1.2f, 2.3f) to Coordinate(3.4f, 4.5f),
-            Coordinate(6.7f, 7.8f) to Coordinate(8.9f, 9.0f))
+        virtualWalls = listOf(
+            listOf(Coordinate(1.2f, 2.3f), Coordinate(3.4f, 4.5f)),
+            listOf(Coordinate(6.7f, 7.8f), Coordinate(8.9f, 9.0f))
+        )
     )
 
     @Test
@@ -25,10 +27,10 @@ class MapDataForPublishTest {
     }
 
     @Test
-    fun `can be serialized without issues`(){
+    fun `can be serialized without issues`() {
         val objectMapper = jacksonObjectMapper()
         val jsonString = objectMapper.writeValueAsString(testObj)
-        assertThat(jsonString).contains("virtual_walls")
+        assertThat(jsonString).contains("virtualWalls")
         println(jsonString)
     }
 
