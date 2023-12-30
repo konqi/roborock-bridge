@@ -16,13 +16,23 @@ TODO: what's required, download, configure, run
 
 What you'll get:
 
-| topic                                 | description |
-|---------------------------------------|-------------|
-| `home/<homeId>`                       |             |
-| `home/<homeId>/rooms`                 |             |
-| `home/<homeId>/schemas`               |             |
-| `home/<homeId>/device/<deviceId>`     |             |
-| `home/<homeId>/device/<deviceId>/map` |             |
+| topic                                        | description |
+|----------------------------------------------|-------------|
+| `home/<homeId>`                              |             |
+| `home/<homeId>/rooms`                        |             |
+| `home/<homeId>/routine/<routineId>`          |             |
+| `home/<homeId>/device/<deviceId>`            |             |
+| `home/<homeId>/device/<deviceId>/<property>` |             |
+
+List of some of the available properties:
+- map
+- path
+- virtual_walls
+- robot_position
+- charger_position
+- state
+- battery
+- ...
 
 Commands:
 
@@ -65,10 +75,10 @@ However, if you have never heard of mqtt, and you have no idea what it is, you m
 | Status | What                                                         |
 |:------:|--------------------------------------------------------------|
 |   📝   | Use request memory to determine avg request to response time |
-|   📝   | Create "idle mode"                                           |
-|   📝   | Disconnect roborock mqtt when idle, reconnect on activity    |
-|   📝   | Detect schema finished to send bridge into idle mode         |
-|   📝   | poll frequent updates during active phase                    | 
+|   ✅    | Create "idle mode"                                           |
+|   ✅    | Disconnect roborock mqtt when idle, reconnect on activity    |
+|   ❌    | ~~Detect routine finished to send bridge into idle mode~~    |
+|   ✅    | poll frequent updates during active phase                    | 
 |   📝   | Room cleaning                                                |
 |   📝   | Selected area cleaning (via mqtt? tricky!)                   |
 
@@ -99,5 +109,5 @@ Feel free to
 If you have no idea how to code, but really want to use this application, you can sponsor me an additional roborock
 robot or lend me yours for a while.
 The actual extraction of what I need shouldn't take long.
-I cannot give any guarantees though how long it might take to make the required adjustments to the application.
+I cannot give any guarantees to how long it might take to make the required adjustments to the application.
 Contact me if interested.
