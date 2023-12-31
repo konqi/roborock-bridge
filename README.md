@@ -5,12 +5,57 @@ It can also send simple commands and requests to the robot.
 
 ## Setup & Start
 
-- configure authentication
-- configure mqtt
+To start experimenting you can start the application with docker compose.
+If you want to use the application for real you'll have to start it the regular way.
 
-Good question... So far I've only started it in IntelliJ ;-)
+### Quickstart with docker compose
 
-TODO: what's required, download, configure, run
+To get started quick you can use docker compose.
+This will start:
+
+- the bridge itself
+- an mqtt broker
+- the web ui
+
+Create an env file that contains
+
+```properties
+USERNAME=<email>
+PASSWORD=<password>
+```
+
+Start up everything with
+
+```shell
+docker compose --env-file <your-env-file> up
+```
+
+Now open up a browser and navigate to http://localhost:8080.
+
+### The regular way
+
+You need at least Java 17 to run the application.
+
+Create an `application.yaml` file with the following content.
+Replace `username`, `password` and `bridge-mqtt.url`, etc. (don't change the `app_secret_salt`).
+
+```yaml
+username: user   # your roborock account username (email address)
+password: secret # your roborock account password
+roborock-mqtt:
+  app_secret_salt: TXdfu$jyZ#TZHsg4    # extracted from decompiled roborock app
+  nonce_generation_salt: ThisIsASecret # just a random string for entropy
+  endpoint: aAbBz0                     # 6 char string to use as an identifier
+bridge-mqtt:
+  url: tcp://localhost:1883
+  client_id: mqtt-bridge-service
+  base_topic: mqtt-bridge
+```
+
+Start the application with:
+```shell
+java -jar file.jar
+```
 
 ## How to use
 
@@ -25,6 +70,7 @@ What you'll get:
 | `home/<homeId>/device/<deviceId>/<property>` |             |
 
 List of some of the available properties:
+
 - map
 - path
 - virtual_walls

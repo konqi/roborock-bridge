@@ -77,11 +77,15 @@ class BridgeMqtt(
                 }
             })
 
+            try {
             connect(MqttConnectOptions().apply {
                 isCleanSession = true
                 connectionTimeout = 10
                 isAutomaticReconnect = true
-            })
+            })} catch (e: Exception) {
+                logger.error("Could not connect to ${bridgeMqttConfig.url}. ${e}")
+                throw e
+            }
 
             val handler = IMqttMessageListener { topic, message ->
                 try {

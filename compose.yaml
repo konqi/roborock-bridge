@@ -1,15 +1,32 @@
+version: '3'
+
 services:
+  bridge:
+    depends_on:
+      - broker
+    build:
+      context: .
+    environment:
+      - USERNAME
+      - PASSWORD
+      - BRIDGEMQTT_URL=tcp://broker:1883
+  frontend:
+    build: ./src/test/resources/map-poc
+    ports:
+      - "8080:80"
   broker:
     image: eclipse-mosquitto
     ports:
       - "1883:1883"
-      - "1884:1884"
       - "9001:9001"
     volumes:
       - type: bind
         source: mosquitto.conf
         target: /mosquitto/config/mosquitto.conf
+
   mockserver:
+    profiles:
+      - test
     image: mockserver/mockserver:5.14.0
     ports:
       - "1080:1080"

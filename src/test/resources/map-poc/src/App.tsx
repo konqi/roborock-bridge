@@ -5,6 +5,7 @@ import CleanupRoutinesModal from "./CleanupRoutinesModal.tsx";
 import SvgMap from "./SvgMap.tsx";
 import {mock_charger_position, mock_map_data, mock_path, mock_robot_position, mock_virtual_walls} from "./mock-data.ts";
 
+const BROKER_URL="mqtt://localhost:9001"
 const topics = [
     "mqtt-bridge/home/+/routine/+",
     "mqtt-bridge/home/+/device/+",
@@ -34,7 +35,7 @@ function App() {
     useEffect(() => {
         if (!mqttClient) {
             console.log("connecting")
-            mqttClient = mqtt.connect("mqtt://localhost:1884")
+            mqttClient = mqtt.connect(BROKER_URL)
 
             console.log("subscribing")
             mqttClient.subscribe(topics, {qos: 0})
