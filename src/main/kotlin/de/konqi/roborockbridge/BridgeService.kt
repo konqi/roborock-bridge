@@ -107,7 +107,7 @@ class BridgeService(
         bridgeMqtt.announceRoutines(schemas.map(SchemaForPublish::fromSchemaEntity))
     }
 
-    @Scheduled(fixedDelay = 5_000)
+    @Scheduled(fixedDelay = 10_000)
     fun mqttStatusPoll() {
         bridgeDeviceStateManager.getDevicesInState(BridgeDeviceState.ACTIVE, BridgeDeviceState.ERROR_ACTIVE)
             .forEach { deviceId ->
@@ -116,7 +116,7 @@ class BridgeService(
             }
     }
 
-    @Scheduled(fixedDelay = 5 * 60_000)
+    @Scheduled(fixedDelay = 5 * 90_000)
     fun restStatusPoll() {
         dataAccessLayer.getHomes().forEach { home ->
             val devices = dataAccessLayer.saveDevices(userApi.getUserHome(home.homeId), home)
@@ -239,7 +239,7 @@ class BridgeService(
 
                 is GetCommand -> {
                     if (command.target.type == TargetType.DEVICE && command.target.identifier.isNotEmpty()) {
-                        if (command.actionKeyword == ActionKeywordsEnum.STATUS) {
+                        if (command.actionKeyword == ActionKeywordsEnum.STATE) {
                             logger.info("Requesting device state refresh via mqtt.")
                             roborockMqtt.publishStatusRequest(command.target.identifier)
                         } else if (command.actionKeyword == ActionKeywordsEnum.MAP) {

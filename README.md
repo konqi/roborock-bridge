@@ -53,6 +53,7 @@ bridge-mqtt:
 ```
 
 Start the application with:
+
 ```shell
 java -jar file.jar
 ```
@@ -80,12 +81,35 @@ List of some of the available properties:
 - battery
 - ...
 
-Commands:
+### Commands
 
-| postfix   | description |
-|-----------|-------------|
-| `/get`    |             |
-| `/action` |             |
+Commands are topics which will invoke certain functionality on the bridge.
+Each command is a prefix that immediately follows the path to the resource the command should be invoked upon.
+
+**Example:**
+If you with to perform a `get` command on a home node, you would publish a message on topic `<base-topic>/home/12345/get`
+
+Currently available commands:
+
+| postfix   | description                                                |
+|-----------|------------------------------------------------------------|
+| `/get`    | request data from remote servers                           |
+| `/action` | invoke action (e.g. return to dock, start cleanup routine) |
+
+#### What can you request with get?
+
+| target | body    | description                                                                                                                  |
+|--------|---------|------------------------------------------------------------------------------------------------------------------------------|
+| home   | empty   | update home and devices via rest (some device states not included) <br/> **Example:** `<base-topic>/home/12345/get`          |
+| device | `state` | request update of all states via mqtt <br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/get` with body `state` |
+| device | `map`   | request update of map data via mqtt <br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/get` with body `map`     |
+
+#### What can you do with actions?
+
+| target  | body   | description                                                                                                                 |
+|---------|--------|-----------------------------------------------------------------------------------------------------------------------------|
+| routine | empty  | Start the cleanup routine <br/> **Example:** `<base-topic>/home/12345/routine/34544/action`                                 |
+| device  | `home` | Send device back to base station<br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `home` |
 
 ## Something is wrong
 
