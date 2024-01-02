@@ -2,6 +2,10 @@ package de.konqi.roborockbridge.remote.mqtt.raw
 
 import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.remote.ProtocolUtils
+import de.konqi.roborockbridge.remote.mqtt.RoborockMqttConfiguration
+import jakarta.annotation.PostConstruct
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import java.nio.ByteBuffer
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
@@ -23,7 +27,7 @@ open class EncryptedMessage : Message {
             super.payload = encode(value)
         }
 
-    private val aesKey: ByteArray get() = ProtocolUtils.calcMd5("${encodeTimestamp(header.timestamp.toLong())}${key}$RR_APPSECRET_SALT")
+    private val aesKey: ByteArray get() = ProtocolUtils.calcMd5("${encodeTimestamp(header.timestamp.toLong())}${key}$RR_APP_SECRET_SALT")
 
     private fun decode(payload: ByteArray): ByteArray {
         val cipher = Cipher.getInstance(CIPHER).also {
@@ -48,9 +52,8 @@ open class EncryptedMessage : Message {
     }
 
     companion object {
-        // hardcoded in librrcodec.so, encrypted by the value of "com.roborock.iotsdk.appsecret" (see https://gist.github.com/rovo89/dff47ed19fca0dfdda77503e66c2b7c7)
-        // @Todo this is configurable via application.yml - either use it or don't make it configurable
-        private const val RR_APPSECRET_SALT = "TXdfu\$jyZ#TZHsg4"
+        // injected via the initializer
+        lateinit var RR_APP_SECRET_SALT: String
         private const val CIPHER = "AES/ECB/PKCS5Padding"
         private val logger by LoggerDelegate()
 
@@ -59,5 +62,13 @@ open class EncryptedMessage : Message {
                 arrayOf(5, 6, 3, 7, 1, 2, 0, 4).map { swapIndex -> it[swapIndex] }.joinToString("")
             }
         }
+    }
+}
+
+@Component
+class EncryptedMessageInitializer(@Autowired private val roborockMqttConfiguration: RoborockMqttConfiguration) {
+    @PostConstruct
+    fun postConstruct() {
+        EncryptedMessage.RR_APP_SECRET_SALT = roborockMqttConfiguration.appSecretSalt
     }
 }

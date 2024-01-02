@@ -1,0 +1,19 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: prepare
+        uses: ./.github/actions/prepare
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "build/libs/*.jar,build/resources/main/application.yaml"
+          draft: true

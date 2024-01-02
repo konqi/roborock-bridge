@@ -1,0 +1,13 @@
+name: Build Gradle project
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: prepare
+        uses: ./.github/actions/prepare
+      - name: Run build with Gradle Wrapper
+        run: ./gradlew build

@@ -2,6 +2,7 @@ package de.konqi.roborockbridge.remote.mqtt
 
 import de.konqi.roborockbridge.remote.mqtt.raw.EncryptedMessage
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -87,6 +88,12 @@ class EncryptedMessageTest {
 
     companion object {
         const val KEY = "this is a secret key"
+
+        @BeforeAll
+        @JvmStatic
+        fun beforeAll() {
+            EncryptedMessage.RR_APP_SECRET_SALT = "TXdfu\$jyZ#TZHsg4"
+        }
 
         @JvmStatic
         fun provideInputs() = listOf(
