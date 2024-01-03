@@ -43,13 +43,15 @@ Replace `username`, `password` and `bridge-mqtt.url`, etc. (don't change the `ap
 username: user   # your roborock account username (email address)
 password: secret # your roborock account password
 roborock-mqtt:
-  app_secret_salt: TXdfu$jyZ#TZHsg4    # extracted from decompiled roborock app
   nonce_generation_salt: ThisIsASecret # just a random string for entropy
   endpoint: aAbBz0                     # 6 char string to use as an identifier
 bridge-mqtt:
-  url: tcp://localhost:1883
-  client_id: mqtt-bridge-service
-  base_topic: mqtt-bridge
+  url: tcp://localhost:1883            # connection url to your mqtt broker (use ssl:// for ssl)
+  # If you don't use anonymous access to the broker, also set these
+  # username: username
+  # password: secret
+  client_id: mqtt-bridge-service       # how the client appears to your broker
+  base_topic: mqtt-bridge              # everything th service does will be below this topic string
 ```
 
 Start the application with:

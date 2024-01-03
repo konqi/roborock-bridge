@@ -42,7 +42,11 @@ class GetCommand(target: Target, val actionKeyword: ActionKeywordsEnum = ActionK
 
 @ConfigurationProperties(prefix = "bridge-mqtt")
 data class BridgeMqttConfig(
-    val url: String, val clientId: String, val baseTopic: String
+    val url: String,
+    val clientId: String,
+    val baseTopic: String,
+    val username: String?,
+    val password: String?
 )
 
 @Component
@@ -78,11 +82,19 @@ class BridgeMqtt(
             })
 
             try {
-            connect(MqttConnectOptions().apply {
-                isCleanSession = true
-                connectionTimeout = 10
-                isAutomaticReconnect = true
-            })} catch (e: Exception) {
+                connect(MqttConnectOptions().apply {
+                    isCleanSession = true
+                    connectionTimeout = 10
+                    isAutomaticReconnect = true
+
+                    if(!bridgeMqttConfig.username.isNullOrBlank()) {
+                        userName = bridgeMqttConfig.username
+                    }
+                    if(!bridgeMqttConfig.password.isNullOrBlank()) {
+                        password = bridgeMqttConfig.password.toCharArray()
+                    }
+                })
+            } catch (e: Exception) {
                 logger.error("Could not connect to ${bridgeMqttConfig.url}. ${e}")
                 throw e
             }
@@ -103,7 +115,10 @@ class BridgeMqtt(
                 "${bridgeMqttConfig.baseTopic}/$HOME/+/$DEVICE/+/+/set"
             )
 
-            subscribe(topicsToSubscribe, IntArray(topicsToSubscribe.size) { 0 }, Array(topicsToSubscribe.size) { handler })
+            subscribe(
+                topicsToSubscribe,
+                IntArray(topicsToSubscribe.size) { 0 },
+                Array(topicsToSubscribe.size) { handler })
         }
     }
 
@@ -297,7 +312,8 @@ class BridgeMqtt(
         const val ROUTINE_TOPIC = "$HOME_TOPIC/$ROUTINE_TOPIC_PARTIAL"
         const val DEVICE_TOPIC = "$HOME_TOPIC/$DEVICE_TOPIC_PARTIAL"
         const val DEVICE_PROPERTY_TOPIC = "$DEVICE_TOPIC/{$PROPERTY}"
-//        const val DEVICE_PROPERTY_COMMAND_TOPIC = "$DEVICE_PROPERTY_TOPIC/{$COMMAND}"
+
+        //        const val DEVICE_PROPERTY_COMMAND_TOPIC = "$DEVICE_PROPERTY_TOPIC/{$COMMAND}"
         const val DEVICE_LOG_TOPIC = "$DEVICE_TOPIC/$LOG"
         const val BRIDGE_LOG_TOPIC = "{$BASE_TOPIC}/$LOG"
     }

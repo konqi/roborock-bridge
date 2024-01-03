@@ -78,6 +78,29 @@ If you're interested in the Roborock REST api, I recommend to filter for
 
 If there is still too much going on, add more filters with ip-addresses.
 
-## Exporting
+## Analyzing the MQTT traffic
 
-## Decryption
+If you've come this far you will probably have noticed that you cannot actually read the mqtt traffic in wireshark.
+This is because the protocol is heavily obfuscated and encrypted.
+To have a look into the mqtt traffic the service as a "secret" mode to decode mqtt traffic.
+To use it follow these instructions:
+
+1. In Wireshark, with the filter `mqtt.msgtype == 3` active, select
+
+   `File` → `Export Packet Dissections` → `As JSON`
+
+   Now save only `Displayed` packets to a file.
+
+2. Use this file as input for
+
+   ```shell
+   java -jar app.jar --mode=reduce --input=captures/capture.json --output=captures/capture.csv
+   ```
+
+   This creates a csv file from the JSON file that contains a lot of information we don't need.
+
+3. Use the CSV file as input for decryption, which is called like this:
+
+   ```shell
+   java -jar app.jar --mode=decode --input=captures/simple.csv --device=deviceId:deviceKey
+   ```
