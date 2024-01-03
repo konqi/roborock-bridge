@@ -11,9 +11,14 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout project sources
+        uses: actions/checkout@v4
       - name: prepare
+        id: prepare
         uses: ./.github/actions/prepare
+      - name: Run build with Gradle Wrapper
+        run: ./gradlew build
       - uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/libs/*.jar,build/resources/main/application.yaml"
+          artifacts: "build/libs/*${{ steps.prepare.outputs.gradle_version_property }}.jar,build/resources/main/application.yaml"
           draft: true

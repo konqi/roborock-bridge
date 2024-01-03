@@ -1,14 +1,15 @@
-name: prepare
-description: prepare for build
+name: prepare gradle
+description: prepare for build with gradle
 outputs:
-  random-number:
-    description: "version of artifact as declared in gradle file"
+  artifact-version:
+    description: version stripped of the -SNAPSHOT part
     value: ${{ steps.version_step.outputs.artifact_version }}
+  gradle-version-property:
+    description: version as defined in gradle file
+    value: ${{ steps.version_step.outputs.gradle_version_property }}
 runs:
   using: composite
   steps:
-    - name: Checkout project sources
-      uses: actions/checkout@v4
     - uses: actions/setup-java@v4
       with:
         distribution: 'corretto'
@@ -18,4 +19,8 @@ runs:
     - name: Extract version
       id: version_step
       shell: bash
-      run: ./gradlew properties -q | awk '/^version:/ {print "artifact_version="$2}' >> $GITHUB_OUTPUT
+      run: |
+        export GRADLE_VERSION_PROPERTY=`./gradlew properties -q | awk '/^version:/ {print $2}'`
+        echo gradle_version_property=$GRADLE_VERSION_PROPERTY >> $GITHUB_OUTPUT
+        export ARTIFACT_VERSION=`cut -d'-' -f1 <<<"$GRADLE_VERSION_PROPERTY"`
+        echo artifact_version=$ARTIFACT_VERSION >> $GITHUB_OUTPUT
