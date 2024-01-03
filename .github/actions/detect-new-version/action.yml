@@ -1,0 +1,27 @@
+name: detect version
+description: Check version and create release tag if new version found
+inputs:
+  version:
+    description: the current version string
+    required: true
+  token:
+    description: token used to access repository
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: mukunku/tag-exists-action@v1.5.0
+      id: check-tag
+      with:
+        tag: ${{ inputs.version }}
+    - uses: actions/github-script@v7
+      if: steps.check-tag.outputs.exists == 'false'
+      with:
+        github-token: ${{ inputs.token }}
+        script: |
+          github.rest.git.createRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: 'refs/tags/${{ inputs.version }}',
+            sha: context.sha
+          })
