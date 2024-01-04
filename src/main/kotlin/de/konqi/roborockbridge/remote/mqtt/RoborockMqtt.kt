@@ -82,9 +82,8 @@ class RoborockMqtt(
 
     @PreDestroy
     private fun disconnect() {
-        mqttClient.unsubscribe(subscribeTopic)
-
         if (mqttClient.isConnected) {
+            mqttClient.unsubscribe(subscribeTopic)
             mqttClient.disconnect()
         }
         logger.info("disconnected")
@@ -166,10 +165,10 @@ class RoborockMqtt(
     }
 
     @Throws(RuntimeException::class)
-    fun publishRequest(
+    fun <T> publishRequest(
         deviceId: String,
         method: RequestMethod,
-        parameters: List<String>? = null,
+        parameters: List<T>? = null,
         secure: Boolean = false
     ) {
         alive()
@@ -183,7 +182,7 @@ class RoborockMqtt(
             key = robot.deviceKey,
             parameters = parameters,
             secure = secure
-        ) else request101Factory.createRequest(method = method, key = robot.deviceKey, secure = secure)
+        ) else request101Factory.createRequest<Unit>(method = method, key = robot.deviceKey, secure = secure)
         mqttClient.publish(topic, MqttMessage(message.bytes))
         logger.info("Published '${method.value}' request via topic '$topic'.")
         requestMemory.put(
@@ -201,7 +200,56 @@ class RoborockMqtt(
 
     fun publishMapRequest(deviceId: String) {
         alive()
-        publishRequest(deviceId = deviceId, method = RequestMethod.GET_MAP_V1, secure = true)
+        publishRequest<Unit>(deviceId = deviceId, method = RequestMethod.GET_MAP_V1, secure = true)
+    }
+
+    fun publishRoomMappingRequest(deviceId: String) {
+        alive()
+        publishRequest<Unit>(deviceId = deviceId, method = RequestMethod.GET_ROOM_MAPPING)
+    }
+
+    fun publishSetCleanMotorMode(deviceId: String, mopMode: Int, fanPower: Int, waterBoxMode: Int) {
+        alive()
+        publishRequest(
+            deviceId = deviceId,
+            method = RequestMethod.SET_CLEAN_MOTOR_MODE,
+            parameters = listOf(
+                SetCleanMotorModePayload(mopMode = mopMode, fanPower = fanPower, waterBoxMode = waterBoxMode)
+            )
+        )
+    }
+
+    fun publishSetCustomMode(deviceId: String, mopMode: Int) {
+        alive()
+        publishRequest(
+            deviceId = deviceId,
+            method = RequestMethod.SET_CUSTOM_MODE,
+            parameters = listOf(
+                mopMode
+            )
+        )
+    }
+
+    fun publishCleanSegmentRequest(
+        deviceId: String,
+        segments: List<Int>,
+        cleanMop: Int = 0,
+        cleanOrderMode: Int = 0,
+        repeat: Int = 1
+    ) {
+        alive()
+        publishRequest(
+            deviceId = deviceId,
+            method = RequestMethod.APP_SEGMENT_CLEAN,
+            parameters = listOf(
+                AppSegmentCleanRequestPayload(
+                    cleanMop = cleanMop,
+                    cleanOrderMode = cleanOrderMode,
+                    repeat = repeat,
+                    segments = segments
+                )
+            ), secure = false
+        )
     }
 
     companion object {

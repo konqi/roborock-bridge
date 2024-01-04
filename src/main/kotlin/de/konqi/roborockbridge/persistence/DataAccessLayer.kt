@@ -28,8 +28,16 @@ class DataAccessLayer(
 
     fun saveRooms(
         homeDetails: UserHomeData, homeEntity: Home
-    ): MutableIterable<Room> {
+    ): Iterable<Room> {
         return roomRepository.saveAll(homeDetails.rooms.map { Room(home = homeEntity, roomId = it.id, name = it.name) })
+    }
+
+    fun getRoomsForHome(homeId: Int): List<Room> {
+        return roomRepository.findAllByHome_HomeId(homeId)
+    }
+
+    fun saveRooms(rooms: List<Room>): List<Room> {
+        return roomRepository.saveAll(rooms).toList()
     }
 
     fun getHomes(): Iterable<Home> = homeRepository.findAll()

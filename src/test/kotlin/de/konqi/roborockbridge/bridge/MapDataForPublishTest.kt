@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 class MapDataForPublishTest {
     val testObj = MapDataForPublish(
         map = "Hi",
+        bitmapData = "bitmap",
         robotPosition = Coordinate(0.0f, 0.0f),
         chargerPosition = Coordinate(0.0f, 0.0f),
         path = listOf(),
@@ -31,6 +32,7 @@ class MapDataForPublishTest {
         val objectMapper = jacksonObjectMapper()
         val jsonString = objectMapper.writeValueAsString(testObj)
         assertThat(jsonString).contains("virtualWalls")
+        assertThat(jsonString).contains("bitmapData")
         println(jsonString)
     }
 
@@ -39,6 +41,7 @@ class MapDataForPublishTest {
         assertThat(testObj.getFields()).hasSameElementsAs(
             setOf(
                 "map",
+                "bitmapData",
                 "robotPosition",
                 "chargerPosition",
                 "path",

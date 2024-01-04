@@ -1,0 +1,3 @@
+.room.selected {
+    filter: saturate(200%) brightness(0.5);
+}

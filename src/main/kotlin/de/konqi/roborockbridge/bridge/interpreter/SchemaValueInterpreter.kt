@@ -34,7 +34,7 @@ interface SchemaValueInterpreter {
      * Function that translates code and value into something for human consumption
      *
      */
-    fun interpret(code: String, value: Int): String
+    fun interpret(code: String, value: Int): String?
 
     /**
      * Function to get possible values for a code

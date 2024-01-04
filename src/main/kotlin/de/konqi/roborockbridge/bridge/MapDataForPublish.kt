@@ -6,6 +6,7 @@ import kotlin.reflect.full.declaredMemberProperties
 
 data class MapDataForPublish(
     val map: String?,
+    val bitmapData: String?,
     val robotPosition: Coordinate<Float>?,
     val chargerPosition: Coordinate<Float>?,
     val path: List<Coordinate<Float>>?,
@@ -24,6 +25,7 @@ data class MapDataForPublish(
 
         fun fromProtocol301Payload(payload: MapDataPayload) = MapDataForPublish(
             map = payload.map?.getImageDataUrl(),
+            bitmapData = payload.map?.getCompressedBitmapData(),
             robotPosition = payload.robotPosition,
             chargerPosition = payload.chargerPosition,
             gotoPath = payload.gotoPath?.points,

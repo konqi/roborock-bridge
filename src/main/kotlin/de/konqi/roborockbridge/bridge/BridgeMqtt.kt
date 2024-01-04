@@ -39,6 +39,7 @@ class ActionCommand(target: Target, val actionKeyword: ActionKeywordsEnum = Acti
 
 class GetCommand(target: Target, val actionKeyword: ActionKeywordsEnum = ActionKeywordsEnum.UNKNOWN) : Command(target)
 
+class SetCommand(target: Target, val what: String /* TODO this should identify the prop or action */, val parameters: Map<String, Int>) : Command(target)
 
 @ConfigurationProperties(prefix = "bridge-mqtt")
 data class BridgeMqttConfig(
@@ -77,7 +78,7 @@ class BridgeMqtt(
                 }
 
                 override fun deliveryComplete(token: org.eclipse.paho.client.mqttv3.IMqttDeliveryToken?) {
-                    logger.debug("Message delivered")
+                    logger.debug("Message delivered (${token?.messageId})")
                 }
             })
 
@@ -212,6 +213,7 @@ class BridgeMqtt(
     }
 
     fun announceRooms(rooms: List<Room>) {
+        // TODO: Do not publish db entities!!
         logger.info("Announcing ${rooms.size} rooms.")
         val topic = ROOM_TOPIC.replace(HOME_TOPIC, getHomeTopic(rooms.first().home.homeId))
         val payload = objectMapper.writeValueAsBytes(rooms)

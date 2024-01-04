@@ -29,7 +29,7 @@ class Request101FactoryTest(
         assertEquals(JSONObject(jsonObjA)["id"], 1)
 
         // get map request (id should increment, security should be present)
-        val (_, requestBmessage) = request101Factory.createRequest(key = "secret", method = RequestMethod.GET_MAP_V1, secure = true)
+        val (_, requestBmessage) = request101Factory.createRequest<Unit>(key = "secret", method = RequestMethod.GET_MAP_V1, secure = true)
         val requestBPayload = String(requestBmessage.payload)
 
         assertTrue("security" in requestBPayload)

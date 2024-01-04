@@ -3,7 +3,9 @@ package de.konqi.roborockbridge.remote.mqtt.response.map
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
 import java.util.*
+import java.util.zip.Deflater
 import javax.imageio.ImageIO
 import kotlin.collections.HashMap
 import kotlin.experimental.and
@@ -19,12 +21,6 @@ data class Room(
 
 enum class PixelType {
     OUTSIDE,
-    INSIDE,
-    WALL,
-    SCAN,
-    OBSTACLE_WALL,
-    OBSTACLE_WALL_V2,
-    OBSTACLE_ROOM_0,
     OBSTACLE_ROOM_1,
     OBSTACLE_ROOM_2,
     OBSTACLE_ROOM_3,
@@ -40,6 +36,28 @@ enum class PixelType {
     OBSTACLE_ROOM_13,
     OBSTACLE_ROOM_14,
     OBSTACLE_ROOM_15,
+    OBSTACLE_ROOM_16,
+    OBSTACLE_ROOM_17,
+    OBSTACLE_ROOM_18,
+    OBSTACLE_ROOM_19,
+    OBSTACLE_ROOM_20,
+    OBSTACLE_ROOM_21,
+    OBSTACLE_ROOM_22,
+    OBSTACLE_ROOM_23,
+    OBSTACLE_ROOM_24,
+    OBSTACLE_ROOM_25,
+    OBSTACLE_ROOM_26,
+    OBSTACLE_ROOM_27,
+    OBSTACLE_ROOM_28,
+    OBSTACLE_ROOM_29,
+    OBSTACLE_ROOM_30,
+    OBSTACLE_ROOM_31,
+    OBSTACLE_ROOM_0,
+    INSIDE,
+    WALL,
+    SCAN,
+    OBSTACLE_WALL,
+    OBSTACLE_WALL_V2,
     OTHER;
 
     companion object {
@@ -81,9 +99,9 @@ class MapDataImage(data: MapDataSection) {
                     OBSTACLE_WALL -> PixelType.OBSTACLE_WALL
                     OBSTACLE_WALL_V2 -> PixelType.OBSTACLE_WALL_V2
                     OBSTACLE_ROOM -> {
-                        // other implementations shr by 3 making the lowest number 16
-                        // since the first bit is always 1, working with 2^4 ids zero-based is easier
-                        val roomNumber = (pixel.toInt() and 0xFF) shr 3 and 0xF
+                        // use bit 4 to 8 for room number
+                        // the first bit is always 1, making the lowest number 16
+                        val roomNumber = (pixel.toInt() and 0xFF) shr 3
 
                         val room = rooms[roomNumber]
                         if (room == null) {
@@ -102,6 +120,24 @@ class MapDataImage(data: MapDataSection) {
                 }
             }
         }
+    }
+
+    fun getCompressedBitmapData(): String {
+        val bytes = bitmap.flatMap { it.map { it.ordinal.toByte() } }.toByteArray()
+        val output = ByteBuffer.allocate(bytes.size).also { buffer ->
+            Deflater().run {
+                setInput(bytes)
+                finish()
+                deflate(buffer)
+                end()
+            }
+        }.flip()
+
+        val compressedBytes = ByteArray(output.limit()).also {
+            output.get(it)
+        }
+
+        return "data:deflated-bitmap/${width}x${height};base64,${Base64.getEncoder().encodeToString(compressedBytes)}"
     }
 
     /**

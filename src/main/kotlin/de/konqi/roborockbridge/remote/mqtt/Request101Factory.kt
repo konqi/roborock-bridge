@@ -37,10 +37,10 @@ class Request101Factory(
         }
     }
 
-    fun createRequest(
+    fun <T> createRequest(
         method: RequestMethod,
         key: String,
-        parameters: List<String> = emptyList(),
+        parameters: List<T> = emptyList(),
         secure: Boolean = false
     ): Request101 {
         val message = EncryptedMessage(key)

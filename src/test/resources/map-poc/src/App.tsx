@@ -1,18 +1,28 @@
 import mqtt, {MqttClient} from "mqtt"
 import {useCallback, useEffect, useState} from "react";
-import {Device, Path, Position, Routine, VirtualWalls} from "./types.ts";
+import {Device, Path, Position, Room, Routine, VirtualWalls} from "./types.ts";
 import CleanupRoutinesModal from "./CleanupRoutinesModal.tsx";
 import SvgMap from "./SvgMap.tsx";
-import {mock_charger_position, mock_map_data, mock_path, mock_robot_position, mock_virtual_walls} from "./mock-data.ts";
+import {
+    mock_bitmap_data,
+    mock_charger_position,
+    mock_map_data,
+    mock_path,
+    mock_robot_position, mock_room_mapping,
+    mock_virtual_walls
+} from "./mock-data.ts";
+import SvgMapClient from "./SvgMapClient.tsx";
 
-const BROKER_URL="mqtt://localhost:9001"
+const BROKER_URL = "mqtt://localhost:9001"
 const topics = [
     "mqtt-bridge/home/+/routine/+",
     "mqtt-bridge/home/+/device/+",
+    "mqtt-bridge/home/+/rooms",
     "mqtt-bridge/home/+/device/+/state",
     "mqtt-bridge/home/+/device/+/error",
     "mqtt-bridge/home/+/device/+/battery",
     "mqtt-bridge/home/+/device/+/map",
+    "mqtt-bridge/home/+/device/+/bitmap_data",
     "mqtt-bridge/home/+/device/+/virtual_walls",
     "mqtt-bridge/home/+/device/+/path",
     "mqtt-bridge/home/+/device/+/charger_position",
@@ -25,12 +35,15 @@ let mqttClient: MqttClient | null
 function App() {
     const [deviceList, setDeviceList] = useState<Device[]>([])
     const [routineList, setRoutineList] = useState<Routine[]>([])
-    const [mapData, setMapData] = useState<string>(mock_map_data)
+    const [mapData, setMapData] = useState(mock_map_data)
+    const [bitmapData, setBitmapData] = useState(mock_bitmap_data)
     const [robotPosition, setRobotPosition] = useState<Position>(mock_robot_position)
     const [chargerPosition, setChargerPosition] = useState<Position>(mock_charger_position)
     const [path, setPath] = useState<Path>(mock_path)
     const [virtualWalls, setVirtualWalls] = useState<VirtualWalls>(mock_virtual_walls)
     const [cleanupModalOpen, setCleanupModalOpen] = useState(false)
+    const [roomList, setRoomList] = useState<Room[]>(mock_room_mapping)
+    const [useClientMap, setUseClientMap] = useState(false)
 
     useEffect(() => {
         if (!mqttClient) {
@@ -56,6 +69,9 @@ function App() {
                     case 'map':
                         setMapData(message.toString())
                         break
+                    case 'bitmap_data':
+                        setBitmapData(message.toString())
+                        break
                     case 'robot_position':
                         setRobotPosition(JSON.parse(message.toString()))
                         break
@@ -67,6 +83,9 @@ function App() {
                         break
                     case 'virtual_walls':
                         setVirtualWalls(JSON.parse(message.toString()))
+                        break
+                    case 'rooms':
+                        setRoomList(JSON.parse(message.toString()))
                         break
                     case 'goto_path':
                     default:
@@ -133,8 +152,32 @@ function App() {
                 <CleanupRoutinesModal isModalOpen={cleanupModalOpen} closeModal={() => setCleanupModalOpen(false)}
                                       routines={routineList} mqttClient={mqttClient!!}/>
                 <div className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
-                    <SvgMap imageUrl={mapData} robotPosition={robotPosition} chargerPosition={chargerPosition}
-                            path={path} virtualWalls={virtualWalls}/>
+                    <label htmlFor="toggleClientMap" className="flex items-center cursor-pointer">
+                        <div className="relative">
+                            <input type="checkbox" id="toggleClientMap" className="sr-only" onChange={() => {
+                                setUseClientMap(!useClientMap)
+                            }}/>
+                            <div className="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                            <div className="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"
+                                 style={useClientMap ? {
+                                     transform: 'translateX(100%)',
+                                     backgroundColor: '#48bb78'
+                                 } : {}}></div>
+                        </div>
+                        <div className="ml-3 text-gray-700 font-medium">
+                            Use client generated map
+                        </div>
+                    </label>
+                    {!useClientMap &&
+                        <SvgMap imageUrl={mapData} robotPosition={robotPosition} chargerPosition={chargerPosition}
+                                path={path} virtualWalls={virtualWalls}/>
+                    }
+                    {useClientMap &&
+                        <SvgMapClient bitmapData={bitmapData} robotPosition={robotPosition}
+                                      chargerPosition={chargerPosition}
+                                      path={path} virtualWalls={virtualWalls}
+                                      roomList={roomList}/>
+                    }
                 </div>
             </main>
         </div>

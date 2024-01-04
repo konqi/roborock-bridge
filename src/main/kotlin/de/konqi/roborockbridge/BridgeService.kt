@@ -15,6 +15,7 @@ import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestWrapper
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.GetPropGetStatusResponse
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseDps
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseWrapper
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.RoomMapping
 import de.konqi.roborockbridge.remote.mqtt.response.Protocol301
 import de.konqi.roborockbridge.remote.mqtt.response.MapDataWrapper
 import de.konqi.roborockbridge.remote.rest.HomeApi
@@ -166,14 +167,29 @@ class BridgeService(
 
                 IpcResponseWrapper.SCHEMA_TYPE -> {
                     val payload = cast<MessageWrapper<IpcResponseDps<*>>>(message).payload
-                    if (payload.method == RequestMethod.GET_PROP && payload.result != null) {
-                        val notifyAboutChangesAfter = Date()
-                        val result = cast<Array<GetPropGetStatusResponse>>(payload.result).first()
-                        dataAccessLayer.updateDeviceStates(message.deviceId, result.states)
-                        bridgeDeviceStateManager.updateDeviceState(message.deviceId, result.states)
+                    if (payload.result != null) {
+                        if (payload.method == RequestMethod.GET_PROP) {
+                            val notifyAboutChangesAfter = Date()
+                            val result = cast<Array<GetPropGetStatusResponse>>(payload.result).first()
+                            dataAccessLayer.updateDeviceStates(message.deviceId, result.states)
+                            bridgeDeviceStateManager.updateDeviceState(message.deviceId, result.states)
 
-                        // notify
-                        publishDeviceStatus(message.deviceId, notifyAboutChangesAfter)
+                            // notify
+                            publishDeviceStatus(message.deviceId, notifyAboutChangesAfter)
+                        } else if (payload.method == RequestMethod.GET_ROOM_MAPPING) {
+                            val result = cast<Array<RoomMapping>>(payload.result)
+                            val homeId = dataAccessLayer.getDevice(message.deviceId).get().home.homeId
+                            val rooms = dataAccessLayer.getRoomsForHome(homeId = homeId)
+
+                            val listOfRestRoomIds = result.map { it.restRoomId.toInt() }
+                            val updatedRooms = rooms.filter { it.roomId in listOfRestRoomIds }
+                                .map { roomFromDb ->
+                                    roomFromDb.copy(mqttRoomId = result.find { it.restRoomId.toInt() == roomFromDb.roomId }?.mqttRoomId)
+                                }.also { dataAccessLayer.saveRooms(it) }
+
+                            // NOTIFY
+                            bridgeMqtt.announceRooms(updatedRooms)
+                        }
                     }
                 }
 
@@ -217,8 +233,16 @@ class BridgeService(
                             when (command.actionKeyword) {
                                 ActionKeywordsEnum.HOME -> {
                                     logger.info("Requesting device '${command.target.identifier}' to return to dock via mqtt.")
-                                    roborockMqtt.publishRequest(command.target.identifier, RequestMethod.APP_CHARGE)
+                                    roborockMqtt.publishRequest<Unit>(
+                                        command.target.identifier,
+                                        RequestMethod.APP_CHARGE
+                                    )
                                 }
+
+//                                TODO implement - think about action keywords and params
+//                                ActionKeywordsEnum.SEGMENTS -> {
+//                                    roborockMqtt.publishCleanSegmentRequest(command.target.identifier, listOf())
+//                                }
 
                                 else -> {
                                     logger.warn("currently only 'home' is a valid argument for device action.")
@@ -242,6 +266,7 @@ class BridgeService(
                         if (command.actionKeyword == ActionKeywordsEnum.STATE) {
                             logger.info("Requesting device state refresh via mqtt.")
                             roborockMqtt.publishStatusRequest(command.target.identifier)
+                            roborockMqtt.publishRoomMappingRequest(command.target.identifier)
                         } else if (command.actionKeyword == ActionKeywordsEnum.MAP) {
                             logger.info("Requesting device map via mqtt.")
                             roborockMqtt.publishMapRequest(command.target.identifier)
@@ -255,6 +280,21 @@ class BridgeService(
                         )
                     }
                 }
+
+//              TODO implement - think about params and topic/target for set with multiple values
+//                is SetCommand -> {
+//                    if(command.target.type == TargetType.DEVICE && command.target.identifier.isNotEmpty()) {
+//                        if(command.what == "set_clean_motor_mode") {
+//                            roborockMqtt.publishSetCleanMotorMode()
+//                        }
+//                        else if(command.what == "set_custom_mode") {
+//                            roborockMqtt.publishSetCustomMode()
+//                        }
+//                        else {
+//                            logger.warn("SetCommand for unknown property")
+//                        }
+//                    }
+//                }
 
                 else -> {
                     logger.warn("Command $command not implemented")

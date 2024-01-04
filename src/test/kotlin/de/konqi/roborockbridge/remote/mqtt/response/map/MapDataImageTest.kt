@@ -20,6 +20,15 @@ class MapDataImageTest {
         assertThat(mapDataImage.width).isGreaterThan(0u)
     }
 
+    @Test
+    fun `can get compressed bitmap`() {
+        val section = MapDataSection.fromRaw(payload)
+        val mapDataImage = MapDataImage(section)
+
+        val foo = mapDataImage.getCompressedBitmapData()
+        println(foo)
+    }
+
     companion object {
         val payload = ByteBuffer.wrap(
             Base64.getDecoder()

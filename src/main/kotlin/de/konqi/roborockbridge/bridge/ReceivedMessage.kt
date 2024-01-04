@@ -34,6 +34,7 @@ enum class CommandType(val value: String) {
 enum class ActionKeywordsEnum(val value: String) {
     HOME("home"),
     MAP("map"),
+    SEGMENTS("segments"),
     STATE("state"),
     UNKNOWN("unknown");
 

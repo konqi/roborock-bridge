@@ -22,4 +22,6 @@ data class Room(
     val roomId: Int,
     @Column(nullable = false)
     val name: String,
+    @Column(nullable = true)
+    val mqttRoomId: Int? = null
 )
