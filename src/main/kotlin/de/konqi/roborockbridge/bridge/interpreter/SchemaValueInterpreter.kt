@@ -61,14 +61,18 @@ class InterpreterProvider(
     @Autowired val dataAccessLayer: DataAccessLayer
 ) {
     fun getInterpreterForModel(modelName: String): SchemaValueInterpreter? =
-        interpreters.find { it.modelNames.contains(modelName) }
+        interpreters.find { it.modelNames.contains(modelName) } ?: interpreters.find {
+            it.modelNames.contains(
+                "*"
+            )
+        }
 
     fun getInterpreterForDevice(device: Device): SchemaValueInterpreter? =
         getInterpreterForModel(device.model)
 
     fun getInterpreterForDevice(deviceId: String): SchemaValueInterpreter? {
         val device = dataAccessLayer.getDevice(deviceId).get()
-        return interpreters.find { it.modelNames.contains(device.model) }
+        return getInterpreterForModel(device.model)
     }
 }
 

@@ -31,10 +31,10 @@ class S8UltraInterpreter : SchemaValueInterpreter {
 
     override fun getOptions(code: String): Map<Int, String> {
         return when (code) {
-            SCHEMA_TO_CODE_MAPPING[120] -> ERROR_CODE_120
-            SCHEMA_TO_CODE_MAPPING[121] -> DEVICE_STATES_101
-            SCHEMA_TO_CODE_MAPPING[123] -> FAN_POWER_123
-            SCHEMA_TO_CODE_MAPPING[124] -> WATER_BOX_124
+            ERROR_CODE -> ERROR_CODE_120
+            STATE -> DEVICE_STATES_101
+            FAN_POWER -> FAN_POWER_123
+            WATER_BOX_MODE -> WATER_BOX_124
             else -> emptyMap()
         }
     }
