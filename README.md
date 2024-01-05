@@ -64,13 +64,13 @@ java -jar file.jar
 
 What you'll get:
 
-| topic                                        | description |
-|----------------------------------------------|-------------|
-| `home/<homeId>`                              |             |
-| `home/<homeId>/rooms`                        |             |
-| `home/<homeId>/routine/<routineId>`          |             |
-| `home/<homeId>/device/<deviceId>`            |             |
-| `home/<homeId>/device/<deviceId>/<property>` |             |
+| topic                                        | description                                                                                                         |
+|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| `home/<homeId>`                              | All devices and routines are associated to a room. This topic contains the home name and the id.                    |
+| `home/<homeId>/rooms`                        | Homes have rooms. This topic contains a list of the defined rooms.                                                  |
+| `home/<homeId>/routine/<routineId>`          | Routines are predefined cleanup tasks (i.e. first vacuum, the mop room A). Routines can be executed with `/action`. |
+| `home/<homeId>/device/<deviceId>`            | This topic contains basic information of the device and is the parent various property topics.                      |
+| `home/<homeId>/device/<deviceId>/<property>` | Topics associated with properties of the device. e.g. current state, remaining battery charge, map data, ...        |
 
 List of some of the available properties:
 
@@ -89,7 +89,8 @@ Commands are topics which will invoke certain functionality on the bridge.
 Each command is a prefix that immediately follows the path to the resource the command should be invoked upon.
 
 **Example:**
-If you with to perform a `get` command on a home node, you would publish a message on topic `<base-topic>/home/12345/get`
+If you with to perform a `get` command on a home node, you would publish a message on
+topic `<base-topic>/home/12345/get`
 
 Currently available commands:
 

@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "de.konqi.roborock-bridge"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.2-SNAPSHOT"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -33,6 +33,7 @@ dependencies {
 //    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     // should use the -no-dependencies version, but logger configuration is broken in artifact
+    // also would like to use newer version, but there is no working arm docker image available
     testImplementation("org.mock-server:mockserver-client-java:5.14.0")
     testImplementation("org.testcontainers:testcontainers:1.19.3")
     testImplementation("org.testcontainers:junit-jupiter:1.19.3")
