@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestPayload
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestWrapper
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.Request101Factory
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test

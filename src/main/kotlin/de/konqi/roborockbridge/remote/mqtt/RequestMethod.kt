@@ -1,9 +1,9 @@
 package de.konqi.roborockbridge.remote.mqtt
 
 import com.fasterxml.jackson.databind.JsonNode
-import de.konqi.roborockbridge.remote.mqtt.ipc.response.GetConsumableResponse
-import de.konqi.roborockbridge.remote.mqtt.ipc.response.GetPropGetStatusResponse
-import de.konqi.roborockbridge.remote.mqtt.ipc.response.RoomMapping
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.payload.GetConsumableResponse
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.payload.GetPropGetStatusResponse
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.payload.RoomMapping
 import kotlin.reflect.KClass
 
 enum class RequestMethod(val value: String, val decodesTo: KClass<*> = JsonNode::class) {
