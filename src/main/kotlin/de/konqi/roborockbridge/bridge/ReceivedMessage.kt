@@ -123,7 +123,8 @@ class ReceivedMessageParser(
 
         val header = ReceivedMessageHeader.fromTopic(topicWithoutBase)
 
-        val action = String(payload).trim().let {
+        val payloadString = String(payload)
+        val action = payloadString.trim().let {
             try {
                 if (it.startsWith("{") && it.endsWith("}")) {
                     objectMapper.readTree(it).get("action").textValue()
@@ -142,7 +143,7 @@ class ReceivedMessageParser(
 
         val expectedPayloadType = targetsAvailableForCommand[header.targetType]?.get(header.command)?.get(action)
         val dto = if (expectedPayloadType != null) {
-            objectMapper.readValue(String(payload), expectedPayloadType.java)
+            objectMapper.readValue(payloadString, expectedPayloadType.java)
         } else {
             StringDTO(String(payload))
         }

@@ -41,11 +41,12 @@ data class BridgeMqttConfig(
 @Profile("bridge")
 @EnableConfigurationProperties(BridgeMqttConfig::class)
 class BridgeMqtt(
-    @Autowired private val bridgeMqttConfig: BridgeMqttConfig, @Autowired private val objectMapper: ObjectMapper,
+    @Autowired private val bridgeMqttConfig: BridgeMqttConfig,
+    @Autowired private val objectMapper: ObjectMapper,
     @Autowired private val receivedMessageParser: ReceivedMessageParser
 ) {
     val mqttClient = MqttClient(bridgeMqttConfig.url, bridgeMqttConfig.clientId, null)
-    val outboundMessagesQueue: Queue<Message> = ConcurrentLinkedQueue()
+//    val outboundMessagesQueue: Queue<Message> = ConcurrentLinkedQueue()
     val inboundMessagesQueue = CircularConcurrentLinkedQueue<ReceivedMessage>(20)
 
     @PostConstruct
@@ -115,17 +116,17 @@ class BridgeMqtt(
         inboundMessagesQueue.add(msg)
     }
 
-    @Scheduled(fixedDelay = 1000)
-    fun queueWorker() {
-        while (!outboundMessagesQueue.isEmpty()) {
-            val message = outboundMessagesQueue.remove()
-            if (mqttClient.isConnected) {
-                mqttClient.publish(message.topic, message.message, message.qos, message.retained)
-            } else {
-                logger.warn("Could not publish message because mqtt client is not connected.")
-            }
-        }
-    }
+//    @Scheduled(fixedDelay = 1000)
+//    fun queueWorker() {
+//        while (!outboundMessagesQueue.isEmpty()) {
+//            val message = outboundMessagesQueue.remove()
+//            if (mqttClient.isConnected) {
+//                mqttClient.publish(message.topic, message.message, message.qos, message.retained)
+//            } else {
+//                logger.warn("Could not publish message because mqtt client is not connected.")
+//            }
+//        }
+//    }
 
 //    fun log(message: String, homeId: Int? = null, deviceId: String? = null) {
 //        logger.info("Logging message '$message' back to broker.")
@@ -265,7 +266,7 @@ class BridgeMqtt(
 
         //        const val DEVICE_PROPERTY_COMMAND_TOPIC = "$DEVICE_PROPERTY_TOPIC/{$COMMAND}"
 
-    //        const val LOG = "log"
+        //        const val LOG = "log"
 //        const val DEVICE_LOG_TOPIC = "$DEVICE_TOPIC/$LOG"
 //        const val BRIDGE_LOG_TOPIC = "{$BASE_TOPIC}/$LOG"
     }
