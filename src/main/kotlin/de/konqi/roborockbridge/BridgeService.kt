@@ -13,6 +13,7 @@ import de.konqi.roborockbridge.remote.mqtt.MessageWrapper
 import de.konqi.roborockbridge.remote.mqtt.RequestMethod
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestWrapper
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppSegmentCleanRequestDTO
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppStartDTO
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.SetCleanMotorModeDTO
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.payload.GetPropGetStatusResponse
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseDps
@@ -262,9 +263,20 @@ class BridgeService(
                                     roborockMqtt.publishCleanSegmentRequest(targetIdentifier, params)
                                 }
 
+                                ActionKeywordsEnum.START -> {
+                                    val params = incomingMessage.body.parameters as AppStartDTO
+                                    logger.info("Starting / Resuming device '$targetIdentifier'")
+                                    roborockMqtt.publishStartRequest(targetIdentifier, params)
+                                }
+
+                                ActionKeywordsEnum.PAUSE -> {
+                                    logger.info("Pausing device '$targetIdentifier'")
+                                    roborockMqtt.publishPauseRequest(targetIdentifier)
+                                }
+
                                 ActionKeywordsEnum.CLEAN_MODE -> {
                                     val params = incomingMessage.body.parameters as SetCleanMotorModeDTO
-                                    logger.info("Setting cleanup mode for '${targetIdentifier}'.")
+                                    logger.info("Setting cleanup mode for '$targetIdentifier'.")
                                     roborockMqtt.publishSetCleanMotorMode(targetIdentifier, params)
                                 }
 

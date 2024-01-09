@@ -2,22 +2,20 @@ package de.konqi.roborockbridge.bridge
 
 import de.konqi.roborockbridge.TestBeanProvider
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppSegmentCleanRequestDTO
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppStartDTO
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.SetCleanMotorModeDTO
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.CsvSource
-import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Bean
 import org.springframework.test.context.ActiveProfiles
-import kotlin.reflect.KClass
 
 @SpringBootTest(classes = [TestBeanProvider::class, ReceivedMessageParser::class, ReceivedMessageParserTest.Companion.Config::class])
 @ActiveProfiles("bridge")
@@ -107,32 +105,66 @@ class ReceivedMessageParserTest {
     }
 
     @Test
-    fun `regex tests`() {
-        ReceivedMessageHeader.deviceIdExtractionRegex.find("/home/123/device/234/get").also {
-            assertThat(it?.groups?.get("home")?.value).isEqualTo("123")
-            assertThat(it?.groups?.get("device")?.value).isEqualTo("234")
-            assertThat(it?.groups?.get("command")?.value).isEqualTo("get")
-        }
+    fun `can handle missing, but optional, payload`() {
+        val msg = parser.parse(
+            "/home/123/device/234/action", "start".toByteArray()
+        )
 
-        ReceivedMessageHeader.deviceIdExtractionRegex.find("/home/123/device/234/action").also {
-            assertThat(it?.groups?.get("home")?.value).isEqualTo("123")
-            assertThat(it?.groups?.get("device")?.value).isEqualTo("234")
-            assertThat(it?.groups?.get("command")?.value).isEqualTo("action")
-        }
-
-        ReceivedMessageHeader.deviceIdExtractionRegex.find("/home/123/routine/345/action").also {
-            assertThat(it?.groups?.get("home")?.value).isEqualTo("123")
-            assertThat(it?.groups?.get("routine")?.value).isEqualTo("345")
-            assertThat(it?.groups?.get("command")?.value).isEqualTo("action")
-        }
-
-        ReceivedMessageHeader.deviceIdExtractionRegex.find("/home/123/device/234/fan_power/set").also {
-            assertThat(it?.groups?.get("home")?.value).isEqualTo("123")
-            assertThat(it?.groups?.get("device")?.value).isEqualTo("234")
-            assertThat(it?.groups?.get("property")?.value).isEqualTo("fan_power")
-        }
+        assertThat(msg?.body?.actionKeyword).isEqualTo(ActionKeywordsEnum.START)
+        assertThat(msg?.body?.parameters).isInstanceOf(AppStartDTO::class.java)
+            .extracting("cleanMop").isEqualTo(0)
     }
 
+    @Test
+    fun `can handle optional payload`() {
+        val msg = parser.parse(
+            "/home/123/device/234/action", """{"action":"start","clean_mop": 1}""".toByteArray()
+        )
+
+        assertThat(msg?.body?.actionKeyword).isEqualTo(ActionKeywordsEnum.START)
+        assertThat(msg?.body?.parameters).isInstanceOf(AppStartDTO::class.java)
+            .extracting("cleanMop").isEqualTo(1)
+    }
+
+    @Nested
+    @DisplayName("regex")
+    inner class RegexTests {
+        @Test
+        fun `can parse device get`() {
+            ReceivedMessageHeader.deviceIdExtractionRegex.find("/home/123/device/234/get").also {
+                assertThat(it?.groups?.get("home")?.value).isEqualTo("123")
+                assertThat(it?.groups?.get("device")?.value).isEqualTo("234")
+                assertThat(it?.groups?.get("command")?.value).isEqualTo("get")
+            }
+        }
+
+        @Test
+        fun `can parse device action`() {
+            ReceivedMessageHeader.deviceIdExtractionRegex.find("/home/123/device/234/action").also {
+                assertThat(it?.groups?.get("home")?.value).isEqualTo("123")
+                assertThat(it?.groups?.get("device")?.value).isEqualTo("234")
+                assertThat(it?.groups?.get("command")?.value).isEqualTo("action")
+            }
+        }
+
+        @Test
+        fun `can parse routine action`() {
+            ReceivedMessageHeader.deviceIdExtractionRegex.find("/home/123/routine/345/action").also {
+                assertThat(it?.groups?.get("home")?.value).isEqualTo("123")
+                assertThat(it?.groups?.get("routine")?.value).isEqualTo("345")
+                assertThat(it?.groups?.get("command")?.value).isEqualTo("action")
+            }
+        }
+
+        @Test
+        fun `can parse device property set`() {
+            ReceivedMessageHeader.deviceIdExtractionRegex.find("/home/123/device/234/fan_power/set").also {
+                assertThat(it?.groups?.get("home")?.value).isEqualTo("123")
+                assertThat(it?.groups?.get("device")?.value).isEqualTo("234")
+                assertThat(it?.groups?.get("property")?.value).isEqualTo("fan_power")
+            }
+        }
+    }
 
     companion object {
         @TestConfiguration

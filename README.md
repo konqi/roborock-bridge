@@ -109,10 +109,14 @@ Currently available commands:
 
 #### What can you do with actions?
 
-| target  | body   | description                                                                                                                 |
-|---------|--------|-----------------------------------------------------------------------------------------------------------------------------|
-| routine | empty  | Start the cleanup routine <br/> **Example:** `<base-topic>/home/12345/routine/34544/action`                                 |
-| device  | `home` | Send device back to base station<br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `home` |
+| target  | body                                                                                                     | description                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|---------|----------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| routine | empty                                                                                                    | Start the cleanup routine <br/> **Example:** `<base-topic>/home/12345/routine/34544/action`                                                                                                                                                                                                                                                                                                                                   |
+| device  | `home`                                                                                                   | Send device back to base station<br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `home`                                                                                                                                                                                                                                                                                                   |
+| device  | `{"action": "segments", "clean_mop": int?, "clean_order_mode": int?, "repeat": int?, "segments": int[]}` | Clean selected segments / rooms. Possible values are the mqttRoomIds for segments and 0 or 1 for the other values (to be verified)<br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `{"action": "segments", "segments": [18,19,20]}`                                                                                                                                                       |
+| device  | `{"action": "clean_mode", "fan_power": int,"mop_mode": int, "water_box_mode": int}`                      | Set cleanup options. Possible property values can be found in the Interpreter for your robot e.g. [S8 Pro Ultra, MOP_MODE_UNKNOWN, FAN_POWER_123, WATER_BOX_124](./src/main/kotlin/de/konqi/roborockbridge/bridge/interpreter/S8UltraInterpreter.kt). <br/>**Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `{"action": "clean_mode", "fan_power": 103,"mop_mode": 300, "water_box_mode": 202}` |
+| device  | `start` or `{"action": "start", "clean_mop": 1}`                                                         | Start / Resume current cleanup task. <br/>**Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `start`                                                                                                                                                                                                                                                                                              |
+| device  | `pause`                                                                                                  | Pause current cleanup task. <br/>**Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `pause`                                                                                                                                                                                                                                                                                                       |
 
 ## Something is wrong
 
@@ -147,12 +151,16 @@ However, if you have never heard of mqtt, and you have no idea what it is, you m
 
 | Status | What                                                         |
 |:------:|--------------------------------------------------------------|
-|   📝   | Use request memory to determine avg request to response time |
+|   ✅    | Use request memory to determine avg request to response time |
 |   ✅    | Create "idle mode"                                           |
 |   ✅    | Disconnect roborock mqtt when idle, reconnect on activity    |
 |   ❌    | ~~Detect routine finished to send bridge into idle mode~~    |
 |   ✅    | poll frequent updates during active phase                    | 
-|   📝   | Room cleaning                                                |
+|   ✅️   | Room cleaning                                                |
+|   ✅    | Set Cleanup modes                                            |
+|   📝   | Verify room cleaning parameters                              |
+|   ✅    | Pause & Resume (e.g. to pause when certain area is entered)  |
+|   📝   | Verify Pause & Resume                                        |
 |   📝   | Selected area cleaning (via mqtt? tricky!)                   |
 
 ## Help reverse engineering the protocol

@@ -1,14 +1,6 @@
 package de.konqi.roborockbridge.bridge
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppSegmentCleanRequestDTO
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.IpcRequestDTO
-import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.SetCleanMotorModeDTO
-import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.StringDTO
-import de.konqi.roborockbridge.utility.LoggerDelegate
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.annotation.Profile
-import org.springframework.stereotype.Service
 
 enum class CommandType(val value: String) {
     /**
@@ -38,7 +30,14 @@ enum class CommandType(val value: String) {
 }
 
 enum class ActionKeywordsEnum(val value: String) {
-    HOME("home"), MAP("map"), SEGMENTS("segments"), CLEAN_MODE("clean_mode"), STATE("state"), UNKNOWN("unknown");
+    HOME("home"),
+    MAP("map"),
+    SEGMENTS("segments"),
+    CLEAN_MODE("clean_mode"),
+    START("start"),
+    PAUSE("pause"),
+    STATE("state"),
+    UNKNOWN("unknown");
 
     companion object {
         private val mapping = ActionKeywordsEnum.entries.associateBy(ActionKeywordsEnum::value)
@@ -111,85 +110,3 @@ data class ReceivedMessage(
     val header: ReceivedMessageHeader, val body: ReceivedMessageBody
 )
 
-@Service
-@Profile("bridge")
-class ReceivedMessageParser(
-    @Autowired private val bridgeMqttConfig: BridgeMqttConfig, @Autowired private val objectMapper: ObjectMapper
-) {
-    fun parse(topic: String, payload: ByteArray): ReceivedMessage? {
-        val topicWithoutBase = if (topic.startsWith(bridgeMqttConfig.baseTopic)) {
-            topic.substring(bridgeMqttConfig.baseTopic.length)
-        } else topic
-
-        val header = ReceivedMessageHeader.fromTopic(topicWithoutBase)
-
-        val payloadString = String(payload)
-        val action = payloadString.trim().let {
-            try {
-                if (it.startsWith("{") && it.endsWith("}")) {
-                    objectMapper.readTree(it).get("action").textValue()
-                } else {
-                    it.split(",").first().trim()
-                }
-            } catch (e: Exception) {
-                it.split(",").first().trim()
-            }
-        }.let { ActionKeywordsEnum.fromValue(it) }
-
-        if (!isAcceptableCommand(targetType = header.targetType, command = header.command, action = action)) {
-            logger.warn("Invalid command [targetType: ${header.targetType}, command: ${header.command}, action: $action]")
-            return null
-        }
-
-        val expectedPayloadType = targetsAvailableForCommand[header.targetType]?.get(header.command)?.get(action)
-        val dto = if (expectedPayloadType != null) {
-            objectMapper.readValue(payloadString, expectedPayloadType.java)
-        } else {
-            StringDTO(String(payload))
-        }
-
-        return ReceivedMessage(
-            header = header,
-            body = ReceivedMessageBody(
-                parameters = dto, actionKeyword = action
-            ),
-        )
-    }
-
-    companion object {
-        private val logger by LoggerDelegate()
-
-        val targetsAvailableForCommand = mapOf(
-            TargetType.DEVICE to mapOf(
-                CommandType.ACTION to mapOf(
-                    ActionKeywordsEnum.SEGMENTS to AppSegmentCleanRequestDTO::class,
-                    ActionKeywordsEnum.CLEAN_MODE to SetCleanMotorModeDTO::class,
-                    ActionKeywordsEnum.HOME to null
-                ),
-                CommandType.GET to mapOf(
-                    ActionKeywordsEnum.STATE to null, ActionKeywordsEnum.MAP to null
-                ),
-            ), TargetType.DEVICE_PROPERTY to mapOf(
-                CommandType.SET to mapOf()
-            ), TargetType.HOME to mapOf(
-                CommandType.GET to mapOf()
-            ), TargetType.ROUTINE to mapOf(
-                CommandType.ACTION to mapOf()
-            )
-        )
-
-        fun isAcceptableCommand(targetType: TargetType, command: CommandType, action: ActionKeywordsEnum) =
-            if (targetsAvailableForCommand.containsKey(targetType) && targetsAvailableForCommand[targetType]!!.containsKey(
-                    command
-                )
-            ) {
-                val possibleActions = targetsAvailableForCommand[targetType]!![command]!!.keys
-                if (possibleActions.isNotEmpty()) {
-                    if (possibleActions.contains(action)) true
-                    else true
-                } else true
-            } else false
-
-    }
-
-}

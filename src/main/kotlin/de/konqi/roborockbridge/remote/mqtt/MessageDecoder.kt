@@ -160,7 +160,7 @@ class MessageDecoder(
 
     fun readProtocol301Body(data: EncryptedMessage): Protocol301 {
         val mqttResponse = Protocol301Binary.fromRawBytes(data.payload)
-        val requestData = requestMemory.getAndRemove(mqttResponse.id.toInt())
+        val requestData = requestMemory.remove(mqttResponse.id.toInt())
         // get nonce for id (assuming the id in the response matches the one in the request)
         return if (requestData?.nonce != null) {
             val decrypted = mqttResponse.decryptAndDecode(requestData.nonce)
