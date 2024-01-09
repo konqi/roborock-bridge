@@ -49,10 +49,11 @@ class ReceivedMessageParserTest {
 
     @Test
     fun `set a device property`(){
-        val setFanSpeedRequest = parser.parse("/home/123/device/234/fan_speed/set", "120".toByteArray())
+        val setFanSpeedRequest = parser.parse("/home/123/device/234/fan_power/set", "120".toByteArray())
         assertThat(setFanSpeedRequest?.header?.targetType).isEqualTo(TargetType.DEVICE_PROPERTY)
         assertThat(setFanSpeedRequest?.header?.homeId).isEqualTo(123)
         assertThat(setFanSpeedRequest?.header?.deviceId).isEqualTo("234")
+        assertThat(setFanSpeedRequest?.header?.targetIdentifier).isEqualTo("fan_power")
         assertThat(setFanSpeedRequest?.body?.actionKeyword).isEqualTo(ActionKeywordsEnum.UNKNOWN)
         assertThat((setFanSpeedRequest?.body?.parameters as? StringDTO)?.value).isEqualTo("120")
     }

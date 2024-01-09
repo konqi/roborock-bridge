@@ -61,7 +61,7 @@ data class ReceivedMessageHeader(
             if (property != null) TargetType.DEVICE_PROPERTY else if (deviceId != null) TargetType.DEVICE else if (routineId != null) TargetType.ROUTINE else TargetType.HOME
         } else TargetType.UNKNOWN
 
-    val targetIdentifier: String? = if (property != null && deviceId != null && homeId != null) "$deviceId/$property"
+    val targetIdentifier: String? = if (property != null && deviceId != null && homeId != null) property
     else if (deviceId != null && homeId != null) deviceId
     else if (routineId != null && homeId != null) routineId.toString()
     else homeId?.toString()
