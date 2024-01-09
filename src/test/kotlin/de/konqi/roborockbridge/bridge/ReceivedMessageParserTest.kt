@@ -4,6 +4,7 @@ import de.konqi.roborockbridge.TestBeanProvider
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppSegmentCleanRequestDTO
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppStartDTO
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.SetCleanMotorModeDTO
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.StringDTO
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -44,6 +45,16 @@ class ReceivedMessageParserTest {
         val getStateRequest = parser.parse("/home/123/device/234/get", "state".toByteArray())
         assertThat(getStateRequest?.header?.targetType).isEqualTo(TargetType.DEVICE)
         assertThat(getStateRequest?.body?.actionKeyword).isEqualTo(ActionKeywordsEnum.STATE)
+    }
+
+    @Test
+    fun `set a device property`(){
+        val setFanSpeedRequest = parser.parse("/home/123/device/234/fan_speed/set", "120".toByteArray())
+        assertThat(setFanSpeedRequest?.header?.targetType).isEqualTo(TargetType.DEVICE_PROPERTY)
+        assertThat(setFanSpeedRequest?.header?.homeId).isEqualTo(123)
+        assertThat(setFanSpeedRequest?.header?.deviceId).isEqualTo("234")
+        assertThat(setFanSpeedRequest?.body?.actionKeyword).isEqualTo(ActionKeywordsEnum.UNKNOWN)
+        assertThat((setFanSpeedRequest?.body?.parameters as? StringDTO)?.value).isEqualTo("120")
     }
 
     @Test
