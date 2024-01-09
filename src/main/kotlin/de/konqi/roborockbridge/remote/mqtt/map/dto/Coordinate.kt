@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.remote.mqtt.response.map
+package de.konqi.roborockbridge.remote.mqtt.map.dto
 
 /**
  * The value received via mqtt has to be divided by 50 to match the pixel map

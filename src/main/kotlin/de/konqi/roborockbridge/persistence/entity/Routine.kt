@@ -21,4 +21,11 @@ data class Routine(
     @Column(name = "routine_id", nullable = false)
     val routineId: Int,
     val name: String,
+
+    @ElementCollection
+    @CollectionTable(
+        name="routine_device",
+        joinColumns=[JoinColumn(name = "routine_id"), JoinColumn(name = "home_id")]
+    )
+    val triggeredDeviceIds: Set<String> = setOf()
 )

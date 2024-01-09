@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.remote.mqtt.response.map
+package de.konqi.roborockbridge.remote.mqtt.map.dto
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

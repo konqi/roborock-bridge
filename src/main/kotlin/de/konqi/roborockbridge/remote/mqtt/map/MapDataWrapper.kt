@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.remote.mqtt.response
+package de.konqi.roborockbridge.remote.mqtt.map
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

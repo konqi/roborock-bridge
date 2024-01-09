@@ -161,6 +161,7 @@ However, if you have never heard of mqtt, and you have no idea what it is, you m
 |   📝   | Verify room cleaning parameters                              |
 |   ✅    | Pause & Resume (e.g. to pause when certain area is entered)  |
 |   📝   | Verify Pause & Resume                                        |
+|   📝   | Detect Device MQTT unreachable and stop polling              |
 |   📝   | Selected area cleaning (via mqtt? tricky!)                   |
 
 ## Help reverse engineering the protocol

@@ -13,15 +13,18 @@ class DataAccessLayer(
     private val homeRepository: HomeRepository,
     private val roomRepository: RoomRepository,
     private val deviceRepository: DeviceRepository,
-    private val schemaRepository: SchemaRepository,
+    private val routineRepository: RoutineRepository,
     private val deviceStateRepository: DeviceStateRepository,
 ) {
     fun saveRoutines(
         schemasFromRoborock: List<UserScenes>, homeEntity: Home
     ): MutableIterable<Routine> {
-        return schemaRepository.saveAll(schemasFromRoborock.map { schema ->
+        return routineRepository.saveAll(schemasFromRoborock.map { schema ->
             Routine(
-                home = homeEntity, routineId = schema.id, name = schema.name
+                home = homeEntity,
+                routineId = schema.id,
+                name = schema.name,
+                triggeredDeviceIds = schema.param.action.items.map { it.entityId }.toSet()
             )
         })
     }
@@ -29,7 +32,13 @@ class DataAccessLayer(
     fun saveRooms(
         homeDetails: UserHomeData, homeEntity: Home
     ): Iterable<Room> {
-        return roomRepository.saveAll(homeDetails.rooms.map { Room(home = homeEntity, roomId = it.id, name = it.name) })
+        return roomRepository.saveAll(homeDetails.rooms.map {
+            Room(
+                home = homeEntity,
+                roomId = it.id,
+                name = it.name
+            )
+        })
     }
 
     fun getRoomsForHome(homeId: Int): List<Room> {
@@ -121,4 +130,8 @@ class DataAccessLayer(
             deviceStateRepository.saveAll(entitiesToSave)
         }
     }
+
+    fun getRoutine(routineId: Int) =
+        routineRepository.findById(routineId)
+
 }

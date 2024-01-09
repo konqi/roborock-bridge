@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.remote.mqtt.response.map
+package de.konqi.roborockbridge.remote.mqtt.map.dto
 
 data class MapDataObjectPosition<T>(
     override val x: T,

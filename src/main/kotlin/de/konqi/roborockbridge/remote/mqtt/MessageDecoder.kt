@@ -10,9 +10,9 @@ import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestWrapper
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseDps
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseWrapper
 import de.konqi.roborockbridge.remote.mqtt.raw.EncryptedMessage
-import de.konqi.roborockbridge.remote.mqtt.response.MapDataWrapper
-import de.konqi.roborockbridge.remote.mqtt.response.Protocol301
-import de.konqi.roborockbridge.remote.mqtt.response.Protocol301Binary
+import de.konqi.roborockbridge.remote.mqtt.map.MapDataWrapper
+import de.konqi.roborockbridge.remote.mqtt.map.Protocol301
+import de.konqi.roborockbridge.remote.mqtt.map.Protocol301Binary
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.nio.ByteBuffer

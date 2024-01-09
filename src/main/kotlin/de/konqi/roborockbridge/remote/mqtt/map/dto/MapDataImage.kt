@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.remote.mqtt.response.map
+package de.konqi.roborockbridge.remote.mqtt.map.dto
 
 import java.awt.Color
 import java.awt.image.BufferedImage

@@ -1,7 +1,7 @@
 package de.konqi.roborockbridge.bridge
 
-import de.konqi.roborockbridge.remote.mqtt.response.MapDataPayload
-import de.konqi.roborockbridge.remote.mqtt.response.map.Coordinate
+import de.konqi.roborockbridge.remote.mqtt.map.MapDataPayload
+import de.konqi.roborockbridge.remote.mqtt.map.dto.Coordinate
 import kotlin.reflect.full.declaredMemberProperties
 
 data class MapDataForPublish(

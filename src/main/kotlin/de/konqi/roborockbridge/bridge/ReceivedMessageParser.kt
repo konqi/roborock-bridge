@@ -61,7 +61,8 @@ class ReceivedMessageParser(
             return objectMapper.readValue(payloadString, expectedPayloadType.java)
         } catch (e: Exception) {
             logger.debug("Using default properties because action type should have json payload but json parser failed. $e")
-            return expectedPayloadType.constructors.find { it.parameters.none { param -> !param.isOptional } }?.callBy(mapOf())
+            return expectedPayloadType.constructors.find { it.parameters.none { param -> !param.isOptional } }
+                ?.callBy(mapOf())
         }
     }
 
