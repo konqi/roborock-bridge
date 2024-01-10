@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.bridge
+package de.konqi.roborockbridge.bridge.dto
 
 import de.konqi.roborockbridge.remote.mqtt.map.MapDataPayload
 import de.konqi.roborockbridge.remote.mqtt.map.dto.Coordinate

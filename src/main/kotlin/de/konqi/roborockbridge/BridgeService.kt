@@ -1,6 +1,7 @@
 package de.konqi.roborockbridge
 
 import de.konqi.roborockbridge.bridge.*
+import de.konqi.roborockbridge.bridge.dto.*
 import de.konqi.roborockbridge.bridge.interpreter.BridgeDeviceState
 import de.konqi.roborockbridge.bridge.interpreter.InterpreterProvider
 import de.konqi.roborockbridge.persistence.DataAccessLayer
@@ -68,13 +69,13 @@ class BridgeService(
         bridgeDeviceStateManager.updateDeviceState(devices)
 
         // announce devices on mqtt broker
-        bridgeMqtt.announceHome(homeEntity)
+        bridgeMqtt.announceHome(HomeForPublish.fromHomeEntity(homeEntity))
         devices.map(DeviceForPublish::fromDeviceEntity).forEach { device ->
             bridgeMqtt.announceDevice(device)
             publishDeviceStatus(deviceId = device.deviceId)
         }
 
-        bridgeMqtt.announceRooms(rooms.toList())
+        bridgeMqtt.announceRooms(rooms.map(RoomForPublish::fromRoomEntity))
 
         val schemasFromRoborock = userApi.getCleanupScenes(homeEntity.homeId)
         val schemas =
@@ -169,7 +170,7 @@ class BridgeService(
                                 }.also { dataAccessLayer.saveRooms(it) }
 
                             // NOTIFY
-                            bridgeMqtt.announceRooms(updatedRooms)
+                            bridgeMqtt.announceRooms(updatedRooms.map(RoomForPublish::fromRoomEntity))
                         }
                     }
                 }

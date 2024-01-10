@@ -1,8 +1,7 @@
 package de.konqi.roborockbridge.bridge
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.konqi.roborockbridge.persistence.entity.Home
-import de.konqi.roborockbridge.persistence.entity.Room
+import de.konqi.roborockbridge.bridge.dto.*
 import de.konqi.roborockbridge.utility.CircularConcurrentLinkedQueue
 import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.utility.camelToSnakeCase
@@ -105,7 +104,7 @@ class BridgeMqtt(
         inboundMessagesQueue.add(msg)
     }
 
-    fun announceHome(home: Home) {
+    fun announceHome(home: HomeForPublish) {
         logger.info("Announcing new home with id '${home.homeId}'")
         val topic = getHomeTopic(home.homeId)
         val payload = objectMapper.writeValueAsBytes(home)
@@ -127,10 +126,9 @@ class BridgeMqtt(
         mqttClient.publish(topic, payload, 0, true)
     }
 
-    fun announceRooms(rooms: List<Room>) {
-        // TODO: Do not publish db entities!!
+    fun announceRooms(rooms: List<RoomForPublish>) {
         logger.info("Announcing ${rooms.size} rooms.")
-        val topic = ROOM_TOPIC.replace(HOME_TOPIC, getHomeTopic(rooms.first().home.homeId))
+        val topic = ROOM_TOPIC.replace(HOME_TOPIC, getHomeTopic(rooms.first().homeId))
         val payload = objectMapper.writeValueAsBytes(rooms)
         mqttClient.publish(
             topic, payload, 0, true

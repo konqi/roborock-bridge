@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.bridge
+package de.konqi.roborockbridge.bridge.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import de.konqi.roborockbridge.bridge.interpreter.SchemaValueInterpreter

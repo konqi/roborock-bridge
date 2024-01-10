@@ -1,6 +1,7 @@
 package de.konqi.roborockbridge.bridge
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import de.konqi.roborockbridge.bridge.dto.MapDataForPublish
 import de.konqi.roborockbridge.remote.mqtt.map.dto.Coordinate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
