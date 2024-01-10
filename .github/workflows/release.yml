@@ -10,10 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      checks: write
     steps:
       - name: Checkout project sources
         uses: actions/checkout@v4
-      - name: prepare
+      - name: Setup Environment & Build
         id: prepare
         uses: ./.github/actions/prepare
       - uses: ncipollo/release-action@v1
