@@ -3,21 +3,23 @@ package de.konqi.roborockbridge
 import de.konqi.roborockbridge.bridge.*
 import de.konqi.roborockbridge.bridge.interpreter.BridgeDeviceState
 import de.konqi.roborockbridge.bridge.interpreter.InterpreterProvider
-import de.konqi.roborockbridge.bridge.interpreter.getState
-import de.konqi.roborockbridge.persistence.*
-import de.konqi.roborockbridge.persistence.entity.Device
+import de.konqi.roborockbridge.persistence.DataAccessLayer
 import de.konqi.roborockbridge.remote.RoborockCredentials
-import de.konqi.roborockbridge.remote.mqtt.RoborockMqtt
-import de.konqi.roborockbridge.remote.mqtt.StatusUpdate
 import de.konqi.roborockbridge.remote.mqtt.MessageWrapper
 import de.konqi.roborockbridge.remote.mqtt.RequestMethod
+import de.konqi.roborockbridge.remote.mqtt.RoborockMqtt
+import de.konqi.roborockbridge.remote.mqtt.StatusUpdate
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestWrapper
-import de.konqi.roborockbridge.remote.mqtt.ipc.response.GetPropGetStatusResponse
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppSegmentCleanRequestDTO
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppStartDTO
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.SetCleanMotorModeDTO
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.StringDTO
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseDps
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseWrapper
-import de.konqi.roborockbridge.remote.mqtt.ipc.response.RoomMapping
-import de.konqi.roborockbridge.remote.mqtt.response.Protocol301
-import de.konqi.roborockbridge.remote.mqtt.response.MapDataWrapper
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.payload.GetPropGetStatusResponse
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.payload.RoomMapping
+import de.konqi.roborockbridge.remote.mqtt.map.MapDataWrapper
+import de.konqi.roborockbridge.remote.mqtt.map.Protocol301
 import de.konqi.roborockbridge.remote.rest.HomeApi
 import de.konqi.roborockbridge.remote.rest.LoginApi
 import de.konqi.roborockbridge.remote.rest.UserApi
@@ -29,37 +31,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.annotation.Profile
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
-import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import java.util.*
-
-@Component
-class BridgeDeviceStateManager(
-    @Autowired private val interpreterProvider: InterpreterProvider
-) {
-    private val deviceStates: MutableMap<String, BridgeDeviceState> = mutableMapOf()
-
-    fun updateDeviceState(device: Device) {
-        deviceStates[device.deviceId] =
-            interpreterProvider.getInterpreterForDevice(device)?.getState(device.state) ?: BridgeDeviceState.UNKNOWN
-    }
-
-    fun updateDeviceState(devices: List<Device>) {
-        devices.forEach(this::updateDeviceState)
-    }
-
-    fun updateDeviceState(deviceId: String, states: Map<String, Int>) {
-        deviceStates[deviceId] =
-            interpreterProvider.getInterpreterForDevice(deviceId)?.getState(states) ?: BridgeDeviceState.UNKNOWN
-    }
-
-    fun setDeviceState(deviceId: String, state: BridgeDeviceState) {
-        deviceStates[deviceId] = state
-    }
-
-    fun getDevicesInState(vararg state: BridgeDeviceState) =
-        deviceStates.filter { device -> state.any { it == device.value } }.keys
-}
 
 @Service
 @Profile("bridge")
@@ -226,23 +199,56 @@ class BridgeService(
 
     private fun bridgeMqttProcessingLoop() {
         while (bridgeMqtt.inboundMessagesQueue.size > 0) {
-            when (val command = bridgeMqtt.inboundMessagesQueue.remove()) {
-                is ActionCommand -> {
-                    when (command.target.type) {
+            val incomingMessage = bridgeMqtt.inboundMessagesQueue.remove()
+            if (incomingMessage.header.targetIdentifier == null) {
+                logger.warn("target identifier of message is empty")
+                continue
+            }
+            val targetType = incomingMessage.header.targetType
+            val targetIdentifier = incomingMessage.header.targetIdentifier
+            val actionKeyword = incomingMessage.body.actionKeyword
+
+            when (incomingMessage.header.command) {
+                CommandType.ACTION -> {
+                    when (targetType) {
                         TargetType.DEVICE -> {
-                            when (command.actionKeyword) {
+                            when (actionKeyword) {
                                 ActionKeywordsEnum.HOME -> {
-                                    logger.info("Requesting device '${command.target.identifier}' to return to dock via mqtt.")
+                                    logger.info("Requesting device '${targetIdentifier}' to return to dock via mqtt.")
                                     roborockMqtt.publishRequest<Unit>(
-                                        command.target.identifier,
+                                        targetIdentifier,
                                         RequestMethod.APP_CHARGE
                                     )
                                 }
 
-//                                TODO implement - think about action keywords and params
-//                                ActionKeywordsEnum.SEGMENTS -> {
-//                                    roborockMqtt.publishCleanSegmentRequest(command.target.identifier, listOf())
-//                                }
+                                ActionKeywordsEnum.SEGMENTS -> {
+                                    val params = incomingMessage.body.parameters as AppSegmentCleanRequestDTO
+                                    logger.info(
+                                        "Requesting device '${targetIdentifier}' to clean segments ${
+                                            params.segments.joinToString(
+                                                ", "
+                                            )
+                                        }."
+                                    )
+                                    roborockMqtt.publishCleanSegmentRequest(targetIdentifier, params)
+                                }
+
+                                ActionKeywordsEnum.START -> {
+                                    val params = incomingMessage.body.parameters as AppStartDTO
+                                    logger.info("Starting / Resuming device '$targetIdentifier'")
+                                    roborockMqtt.publishStartRequest(targetIdentifier, params)
+                                }
+
+                                ActionKeywordsEnum.PAUSE -> {
+                                    logger.info("Pausing device '$targetIdentifier'")
+                                    roborockMqtt.publishPauseRequest(targetIdentifier)
+                                }
+
+                                ActionKeywordsEnum.CLEAN_MODE -> {
+                                    val params = incomingMessage.body.parameters as SetCleanMotorModeDTO
+                                    logger.info("Setting cleanup mode for '$targetIdentifier'.")
+                                    roborockMqtt.publishSetCleanMotorMode(targetIdentifier, params)
+                                }
 
                                 else -> {
                                     logger.warn("currently only 'home' is a valid argument for device action.")
@@ -251,53 +257,65 @@ class BridgeService(
                         }
 
                         TargetType.ROUTINE -> {
-                            logger.info("Requesting cleanup routine '${command.target.identifier}' via rest api.")
-                            userApi.startCleanupSchema(command.target.identifier.toInt())
+                            val routineId = targetIdentifier.toInt()
+                            logger.info("Requesting cleanup routine '${targetIdentifier}' via rest api.")
+                            userApi.startCleanupSchema(routineId)
+
+                            // Assume affected devices become active
+                            dataAccessLayer.getRoutine(routineId).ifPresent {
+                                it.triggeredDeviceIds.forEach { deviceId ->
+                                    bridgeDeviceStateManager.setDeviceState(
+                                        deviceId = deviceId,
+                                        BridgeDeviceState.ACTIVE
+                                    )
+                                }
+                            }
                         }
 
                         else -> {
-                            logger.warn("ActionCommand (targetType=${command.target.type}, actionKeyword=${command.actionKeyword}) type not implemented")
+                            logger.warn("ActionCommand (targetType=${targetType}, actionKeyword=${actionKeyword}) type not implemented")
                         }
                     }
                 }
 
-                is GetCommand -> {
-                    if (command.target.type == TargetType.DEVICE && command.target.identifier.isNotEmpty()) {
-                        if (command.actionKeyword == ActionKeywordsEnum.STATE) {
+                CommandType.GET -> {
+                    if (targetType == TargetType.DEVICE) {
+                        if (actionKeyword == ActionKeywordsEnum.STATE) {
                             logger.info("Requesting device state refresh via mqtt.")
-                            roborockMqtt.publishStatusRequest(command.target.identifier)
-                            roborockMqtt.publishRoomMappingRequest(command.target.identifier)
-                        } else if (command.actionKeyword == ActionKeywordsEnum.MAP) {
+                            roborockMqtt.publishStatusRequest(targetIdentifier)
+                            roborockMqtt.publishRoomMappingRequest(targetIdentifier)
+                        } else if (actionKeyword == ActionKeywordsEnum.MAP) {
                             logger.info("Requesting device map via mqtt.")
-                            roborockMqtt.publishMapRequest(command.target.identifier)
+                            roborockMqtt.publishMapRequest(targetIdentifier)
                         }
-                    } else if (command.target.type == TargetType.HOME && command.target.identifier.isNotEmpty()) {
+                    } else if (targetType == TargetType.HOME) {
                         logger.info("Refreshing home details via rest api.")
                         init()
                     } else {
                         logger.warn(
-                            "GetCommand type (targetType=${command.target.type}) not implemented"
+                            "GetCommand type (targetType=${targetType}) not implemented"
                         )
                     }
                 }
 
-//              TODO implement - think about params and topic/target for set with multiple values
-//                is SetCommand -> {
-//                    if(command.target.type == TargetType.DEVICE && command.target.identifier.isNotEmpty()) {
-//                        if(command.what == "set_clean_motor_mode") {
-//                            roborockMqtt.publishSetCleanMotorMode()
-//                        }
-//                        else if(command.what == "set_custom_mode") {
-//                            roborockMqtt.publishSetCustomMode()
-//                        }
-//                        else {
-//                            logger.warn("SetCommand for unknown property")
-//                        }
-//                    }
-//                }
+                CommandType.SET -> {
+                    if (targetType == TargetType.DEVICE_PROPERTY) {
+                        val value = (incomingMessage.body.parameters as? StringDTO)?.value
+                        if (targetIdentifier == "fan_power" && value != null) {
+                            val intValue = value.toInt()
+                            logger.info("Setting fan_power to $intValue")
+                            // this may not be correct for all robots, it is for S8 Pro Ultra
+                            roborockMqtt.publishSetCustomMode(incomingMessage.header.deviceId!!, intValue)
+                        } else {
+                            logger.warn("Cannot set $targetIdentifier property at the moment.")
+                        }
+                    } else {
+                        logger.warn("Cannot set anything, but device properties at the moment.")
+                    }
+                }
 
                 else -> {
-                    logger.warn("Command $command not implemented")
+                    logger.warn("Command $incomingMessage not implemented")
                 }
             }
         }

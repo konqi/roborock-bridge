@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.remote.mqtt.ipc.response
+package de.konqi.roborockbridge.remote.mqtt.ipc.response.payload
 
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonPropertyOrder

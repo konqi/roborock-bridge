@@ -30,12 +30,9 @@ class RequestMemory {
         return memory.put(key, value)
     }
 
-    fun remove(key: Int) = memory.remove(key)
+    fun remove(key: Int): RequestData? {
+        val value = memory.remove(key)
 
-    fun get(key: Int) = memory.get(key)
-
-    fun getAndRemove(key: Int): RequestData? {
-        val value = memory.get(key)
         if (value != null) {
             logger.debug(
                 "Request {} with method '{}' finished after {} ms",
@@ -43,11 +40,12 @@ class RequestMemory {
                 value.method,
                 Date().time - value.requestTimeMs
             )
-            memory.remove(key)
         }
 
         return value
     }
+
+    fun get(key: Int) = memory[key]
 
     companion object {
         private val logger by LoggerDelegate()

@@ -7,6 +7,10 @@ import de.konqi.roborockbridge.remote.RoborockCredentials
 import de.konqi.roborockbridge.remote.helper.RequestData
 import de.konqi.roborockbridge.remote.helper.RequestMemory
 import de.konqi.roborockbridge.remote.mqtt.*
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.Request101Factory
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppSegmentCleanRequestDTO
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppStartDTO
+import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.SetCleanMotorModeDTO
 import de.konqi.roborockbridge.utility.CircularConcurrentLinkedQueue
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
@@ -193,64 +197,52 @@ class RoborockMqtt(
         )
     }
 
-    fun publishStatusRequest(deviceId: String) {
-        alive()
+    fun publishStatusRequest(deviceId: String) =
         publishRequest(deviceId = deviceId, method = RequestMethod.GET_PROP, parameters = listOf("get_status"))
-    }
 
-    fun publishMapRequest(deviceId: String) {
-        alive()
+    fun publishMapRequest(deviceId: String) =
         publishRequest<Unit>(deviceId = deviceId, method = RequestMethod.GET_MAP_V1, secure = true)
-    }
 
-    fun publishRoomMappingRequest(deviceId: String) {
-        alive()
+    fun publishRoomMappingRequest(deviceId: String) =
         publishRequest<Unit>(deviceId = deviceId, method = RequestMethod.GET_ROOM_MAPPING)
-    }
 
-    fun publishSetCleanMotorMode(deviceId: String, mopMode: Int, fanPower: Int, waterBoxMode: Int) {
-        alive()
-        publishRequest(
-            deviceId = deviceId,
-            method = RequestMethod.SET_CLEAN_MOTOR_MODE,
-            parameters = listOf(
-                SetCleanMotorModePayload(mopMode = mopMode, fanPower = fanPower, waterBoxMode = waterBoxMode)
-            )
+    fun publishSetCleanMotorMode(deviceId: String, parameters: SetCleanMotorModeDTO) = publishRequest(
+        deviceId = deviceId,
+        method = RequestMethod.SET_CLEAN_MOTOR_MODE,
+        parameters = listOf(
+            parameters
         )
-    }
+    )
 
-    fun publishSetCustomMode(deviceId: String, mopMode: Int) {
-        alive()
-        publishRequest(
+    fun publishStartRequest(deviceId: String, appStartDTO: AppStartDTO) = publishRequest(
+        deviceId = deviceId,
+        method = RequestMethod.APP_START,
+        parameters = listOf(appStartDTO)
+    )
+
+    fun publishPauseRequest(deviceId: String) = publishRequest<Unit>(
+        deviceId = deviceId,
+        method = RequestMethod.APP_PAUSE
+    )
+
+    fun publishSetCustomMode(deviceId: String, mopMode: Int) = publishRequest(
             deviceId = deviceId,
             method = RequestMethod.SET_CUSTOM_MODE,
             parameters = listOf(
                 mopMode
             )
         )
-    }
 
     fun publishCleanSegmentRequest(
         deviceId: String,
-        segments: List<Int>,
-        cleanMop: Int = 0,
-        cleanOrderMode: Int = 0,
-        repeat: Int = 1
-    ) {
-        alive()
-        publishRequest(
-            deviceId = deviceId,
-            method = RequestMethod.APP_SEGMENT_CLEAN,
-            parameters = listOf(
-                AppSegmentCleanRequestPayload(
-                    cleanMop = cleanMop,
-                    cleanOrderMode = cleanOrderMode,
-                    repeat = repeat,
-                    segments = segments
-                )
-            ), secure = false
-        )
-    }
+        parameters: AppSegmentCleanRequestDTO
+    ) = publishRequest(
+        deviceId = deviceId,
+        method = RequestMethod.APP_SEGMENT_CLEAN,
+        parameters = listOf(parameters),
+        secure = false
+    )
+
 
     companion object {
         private val logger by LoggerDelegate()

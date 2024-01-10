@@ -1,7 +1,7 @@
-package de.konqi.roborockbridge.remote.mqtt.response
+package de.konqi.roborockbridge.remote.mqtt.map
 
 import de.konqi.roborockbridge.utility.LoggerDelegate
-import de.konqi.roborockbridge.remote.mqtt.response.map.*
+import de.konqi.roborockbridge.remote.mqtt.map.dto.*
 
 data class MapDataPayload(
     val map: MapDataImage? = null,

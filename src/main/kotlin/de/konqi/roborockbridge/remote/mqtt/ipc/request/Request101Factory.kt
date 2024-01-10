@@ -1,12 +1,10 @@
-package de.konqi.roborockbridge.remote.mqtt
+package de.konqi.roborockbridge.remote.mqtt.ipc.request
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.konqi.roborockbridge.remote.ProtocolUtils
+import de.konqi.roborockbridge.remote.mqtt.RequestMethod
+import de.konqi.roborockbridge.remote.mqtt.RoborockMqttConfiguration
 import de.konqi.roborockbridge.remote.mqtt.raw.EncryptedMessage
-import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestDps
-import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestPayload
-import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestPayloadSecurity
-import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestWrapper
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.security.crypto.codec.Hex

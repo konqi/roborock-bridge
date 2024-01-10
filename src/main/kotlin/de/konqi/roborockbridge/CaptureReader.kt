@@ -15,11 +15,11 @@ import de.konqi.roborockbridge.remote.mqtt.MessageWrapper
 import de.konqi.roborockbridge.remote.mqtt.RequestMethod
 import de.konqi.roborockbridge.remote.mqtt.StatusUpdate
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.IpcRequestWrapper
-import de.konqi.roborockbridge.remote.mqtt.ipc.response.GetPropGetStatusResponse
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.payload.GetPropGetStatusResponse
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseDps
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseWrapper
-import de.konqi.roborockbridge.remote.mqtt.response.MapDataWrapper
-import de.konqi.roborockbridge.remote.mqtt.response.Protocol301
+import de.konqi.roborockbridge.remote.mqtt.map.MapDataWrapper
+import de.konqi.roborockbridge.remote.mqtt.map.Protocol301
 import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.utility.cast
 import org.springframework.beans.factory.annotation.Autowired
