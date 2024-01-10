@@ -16,8 +16,6 @@ jobs:
       - name: prepare
         id: prepare
         uses: ./.github/actions/prepare
-      - name: Run build with Gradle Wrapper
-        run: ./gradlew build
       - uses: ncipollo/release-action@v1
         with:
           artifacts: "build/libs/*${{ steps.prepare.outputs.gradle_version_property }}.jar,build/resources/main/application.yaml"

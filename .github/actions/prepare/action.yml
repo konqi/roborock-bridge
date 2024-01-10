@@ -14,8 +14,18 @@ runs:
       with:
         distribution: 'corretto'
         java-version: '17'
-    - name: Setup Gradle
+    - name: Validate Gradle Wrapper
+      uses: gradle/wrapper-validation-action@v1
+    - name: Build with Gradle
       uses: gradle/gradle-build-action@v2
+      with:
+        arguments: build
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: |
+          build/test-results/**/*.xml
     - name: Extract version
       id: version_step
       shell: bash
