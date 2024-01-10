@@ -5,6 +5,7 @@ import de.konqi.roborockbridge.bridge.interpreter.BridgeDeviceState
 import de.konqi.roborockbridge.bridge.interpreter.InterpreterProvider
 import de.konqi.roborockbridge.persistence.DataAccessLayer
 import de.konqi.roborockbridge.remote.RoborockCredentials
+import de.konqi.roborockbridge.remote.helper.RequestMemory
 import de.konqi.roborockbridge.remote.mqtt.MessageWrapper
 import de.konqi.roborockbridge.remote.mqtt.RequestMethod
 import de.konqi.roborockbridge.remote.mqtt.RoborockMqtt
@@ -45,6 +46,7 @@ class BridgeService(
     @Autowired private val bridgeMqtt: BridgeMqtt,
     @Autowired private val dataAccessLayer: DataAccessLayer,
     @Autowired private val interpreterProvider: InterpreterProvider,
+    @Autowired private val requestMemory: RequestMemory,
     @Autowired private val bridgeDeviceStateManager: BridgeDeviceStateManager
 ) {
     private var run = true
@@ -83,6 +85,12 @@ class BridgeService(
 
     @Scheduled(fixedDelay = 10_000)
     fun mqttStatusPoll() {
+        // Clear stale messages and set associated devices to state unreachable
+        requestMemory.clearMessagesOlderThan(5000).map { it.first }.toSet().forEach { deviceId ->
+            bridgeDeviceStateManager.setDeviceState(deviceId, BridgeDeviceState.UNREACHABLE)
+        }
+
+        // poll active devices
         bridgeDeviceStateManager.getDevicesInState(BridgeDeviceState.ACTIVE, BridgeDeviceState.ERROR_ACTIVE)
             .forEach { deviceId ->
                 roborockMqtt.publishStatusRequest(deviceId)

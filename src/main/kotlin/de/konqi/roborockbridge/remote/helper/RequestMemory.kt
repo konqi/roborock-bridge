@@ -15,22 +15,35 @@ data class RequestData(
 
 @Component
 class RequestMemory {
-    val memory = LinkedHashMap<Int, RequestData>(MAX_MEMORY_SIZE)
+    private val deviceMemory: MutableMap<String, LinkedHashMap<Int, RequestData>> = mutableMapOf()
+    val now get() = Date().time
 
-    fun put(key: Int, value: RequestData): RequestData? {
+    private fun getDeviceMemory(deviceId: String): LinkedHashMap<Int, RequestData> =
+        if (deviceMemory[deviceId] == null) {
+            val map: LinkedHashMap<Int, RequestData> = LinkedHashMap(MAX_MEMORY_SIZE)
+            deviceMemory[deviceId] = map
+            map
+        } else {
+            deviceMemory[deviceId]!!
+        }
+
+
+    fun put(deviceId: String, key: Int, value: RequestData): RequestData? {
+        val memory = getDeviceMemory(deviceId)
         while (memory.size >= MAX_MEMORY_SIZE) {
             val lost = memory.pollLastEntry()
             logger.warn(
                 "Request {} with method '{}' evicted after {} ms",
                 lost.first,
                 lost.second.method,
-                Date().time - lost.second.requestTimeMs
+                now - lost.second.requestTimeMs
             )
         }
         return memory.put(key, value)
     }
 
-    fun remove(key: Int): RequestData? {
+    fun remove(deviceId: String, key: Int): RequestData? {
+        val memory = getDeviceMemory(deviceId)
         val value = memory.remove(key)
 
         if (value != null) {
@@ -38,14 +51,35 @@ class RequestMemory {
                 "Request {} with method '{}' finished after {} ms",
                 key,
                 value.method,
-                Date().time - value.requestTimeMs
+                now - value.requestTimeMs
             )
         }
 
         return value
     }
 
-    fun get(key: Int) = memory[key]
+    fun get(deviceId: String, key: Int) = getDeviceMemory(deviceId)[key]
+
+//    fun findUnresponsiveDevices(unresponsiveTimeoutMs: Long): Set<String> =
+//        deviceMemory.filter { device -> device.value.values.minBy { request -> request.requestTimeMs }.requestTimeMs < (now - unresponsiveTimeoutMs) }.keys
+
+    fun clearMessagesOlderThan(ageMs: Long): List<Pair<String, Int>> =
+        deviceMemory.keys.associateWith { deviceId -> deviceMemory[deviceId]?.filter { (_, requestData) -> (requestData.requestTimeMs < (now - ageMs)) }?.keys }
+            .flatMap { (deviceId, requestIds) ->
+                requestIds?.map { id -> deviceId to id } ?: listOf()
+            }.filter { (deviceId, requestId) ->
+                deviceMemory[deviceId]?.remove(requestId).let { removedRequest ->
+                    if (removedRequest != null) {
+                        logger.debug(
+                            "Request {} pruned from memory (was age: {} ms)",
+                            requestId,
+                            now - removedRequest.requestTimeMs
+                        )
+                        true
+                    } else false
+                }
+            }
+
 
     companion object {
         private val logger by LoggerDelegate()

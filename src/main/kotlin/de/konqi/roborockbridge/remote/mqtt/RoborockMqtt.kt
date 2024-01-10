@@ -190,6 +190,7 @@ class RoborockMqtt(
         mqttClient.publish(topic, MqttMessage(message.bytes))
         logger.info("Published '${method.value}' request via topic '$topic'.")
         requestMemory.put(
+            deviceId,
             requestId.toInt(), RequestData(
                 method = method,
                 nonce = if (secure) request101Factory.generateNonce(requestId) else null

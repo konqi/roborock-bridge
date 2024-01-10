@@ -190,7 +190,7 @@ class CaptureReader(
                                     )
 
                                     if (ipcRequest.payload.dps.data.security != null) {
-                                        requestMemory.put(
+                                        requestMemory.put(ipcRequest.deviceId,
                                             ipcRequest.payload.dps.data.requestId, RequestData(
                                                 RequestMethod.valueOf(ipcRequest.payload.dps.data.method.uppercase()),
                                                 Hex.decode(ipcRequest.payload.dps.data.security!!.nonce)
@@ -198,6 +198,7 @@ class CaptureReader(
                                         )
                                     } else {
                                         requestMemory.put(
+                                            ipcRequest.deviceId,
                                             ipcRequest.payload.dps.data.requestId,
                                             RequestData(RequestMethod.valueOf(ipcRequest.payload.dps.data.method.uppercase()))
                                         )
