@@ -1,5 +1,5 @@
 import {Color, Coordinate, Path, PixelType, Position, Room, VirtualWalls} from "./types.ts"
-import {useEffect, useLayoutEffect, useState} from "react"
+import {useCallback, useEffect, useState} from "react"
 import "./SvgMapClient.css"
 
 const RR_ORANGE: Color = "rgb(255, 148, 120)"
@@ -159,7 +159,8 @@ interface SvgMapClientProps {
     robotPosition: Position
     chargerPosition: Position
     path: Path
-    virtualWalls: VirtualWalls,
+    virtualWalls: VirtualWalls
+    cleanSegments: (segments: number[]) => void
 }
 
 function SvgMapClient({
@@ -168,13 +169,18 @@ function SvgMapClient({
                           path,
                           virtualWalls,
                           bitmapData,
-                          roomList
+                          roomList,
+                          cleanSegments: cleanSegmentsCallback
                       }: SvgMapClientProps) {
     const [dimensions, setDimensions] = useState({width: 0, height: 0})
     const [imageMap, setImageMap] = useState<Record<number, string>>({})
     const [roomLabels, setRoomLabels] = useState<Room[]>([])
     const [selectedRooms, setSelectedRooms] = useState<number[]>([])
 
+    const cleanSegments = useCallback(() => {
+        cleanSegmentsCallback(selectedRooms)
+        setSelectedRooms([])
+    }, [selectedRooms, cleanSegmentsCallback]);
 
     useEffect(() => {
         const [preamble] = bitmapData.split(',')
@@ -216,78 +222,82 @@ function SvgMapClient({
         }
     }, [bitmapData]);
 
-    useLayoutEffect(() => {
-    })
-
-    return <svg width="100%"
-                viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-                transform="scale(1,-1) rotate(180)">
-        <defs>
-            <filter x="-0.1" y="-0.25" width="1.2" height="1.5" id="solid">
-                <feFlood floodColor="rgba(159,159,159,0.7)"></feFlood>
-                <feComposite in="SourceGraphic"></feComposite>
-            </filter>
-            <filter id="saturate">
-                <feColorMatrix type="saturate" in="SourceGraphic" values="2"/>
-            </filter>
-        </defs>
-        {
-            imageMap && Object.keys(imageMap).map(pixelType => <image key={`type_${pixelType}`} x="0" y="0"
-                                                                      width={dimensions.width}
-                                                                      height={dimensions.height}
-                                                                      href={imageMap[parseInt(pixelType)]}
-                                                                      className={`room ${selectedRooms.length > 0 && !selectedRooms.includes(parseInt(pixelType)) ? "selected" : ""}`}
-                                                                      style={{
-                                                                          imageRendering: "pixelated"
-                                                                      }}
+    return <div className="relative">
+        <svg width="100%"
+             viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+             transform="scale(1,-1) rotate(180)">
+            <defs>
+                <filter x="-0.1" y="-0.25" width="1.2" height="1.5" id="solid">
+                    <feFlood floodColor="rgba(159,159,159,0.7)"></feFlood>
+                    <feComposite in="SourceGraphic"></feComposite>
+                </filter>
+                <filter id="saturate">
+                    <feColorMatrix type="saturate" in="SourceGraphic" values="2"/>
+                </filter>
+            </defs>
+            {
+                imageMap && Object.keys(imageMap).map(pixelType => <image key={`type_${pixelType}`} x="0" y="0"
+                                                                          width={dimensions.width}
+                                                                          height={dimensions.height}
+                                                                          href={imageMap[parseInt(pixelType)]}
+                                                                          className={`room ${selectedRooms.length > 0 && !selectedRooms.includes(parseInt(pixelType)) ? "selected" : ""}`}
+                                                                          style={{
+                                                                              imageRendering: "pixelated"
+                                                                          }}
+                    />
+                )
+            }
+            <rect x={chargerPosition.x - 5}
+                  y={chargerPosition.y - 5}
+                  width={10}
+                  height={10}
+                  rx={2}
+                  fill="red"/>
+            <circle cx={robotPosition.x}
+                    cy={robotPosition.y}
+                    r={5}
+                    fill="blue"/>
+            <polyline points={pathToPolylinePoints(path)}
+                      fill="none" strokeDasharray="1 1"
+                      stroke="magenta" strokeWidth="1"/>
+            {virtualWalls.map(([start, end], index) =>
+                <line key={index} x1={start.x}
+                      y1={start.y}
+                      x2={end.x}
+                      y2={end.y}
+                      strokeWidth={2} stroke="red" strokeDasharray="2 2"
                 />
-            )
-        }
-        <rect x={robotPosition.x - 5}
-              y={robotPosition.y - 5}
-              width={10}
-              height={10}
-              rx={2}
-              fill="red"/>
-        <circle cx={chargerPosition.x}
-                cy={chargerPosition.y}
-                r={5}
-                fill="blue"/>
-        <polyline points={pathToPolylinePoints(path)}
-                  fill="none" strokeDasharray="1 1"
-                  stroke="magenta" strokeWidth="1"/>
-        {virtualWalls.map(([start, end], index) =>
-            <line key={index} x1={start.x}
-                  y1={start.y}
-                  x2={end.x}
-                  y2={end.y}
-                  strokeWidth={2} stroke="red" strokeDasharray="2 2"
-            />
-        )}
-        {
-            roomLabels.map(label => <text
-                key={label.mqttRoomId}
-                style={{
-                    transform: "scale(-1,1) translateY(3px)",
-                    cursor: "pointer"
-                }}
-                onClick={() => {
-                    if (selectedRooms.includes(label.mqttRoomId)) {
-                        setSelectedRooms(selectedRooms.filter(room => room != label.mqttRoomId))
-                    } else {
-                        setSelectedRooms([...selectedRooms, label.mqttRoomId])
-                    }
-                    console.log({selectedRooms})
-                }}
-                fill="rgba(0,0,0,0.9)"
-                filter="url(#solid)"
-                fontSize={6}
-                textAnchor="middle"
-                x={-1 * (label.position?.x ?? 1)}
-                y={label.position?.y}>{label.name}</text>)
-        }
+            )}
+            {
+                roomLabels.map(label => <text
+                    key={label.mqttRoomId}
+                    style={{
+                        transform: "scale(-1,1) translateY(3px)",
+                        cursor: "pointer"
+                    }}
+                    onClick={() => {
+                        if (selectedRooms.includes(label.mqttRoomId)) {
+                            setSelectedRooms(selectedRooms.filter(room => room != label.mqttRoomId))
+                        } else {
+                            setSelectedRooms([...selectedRooms, label.mqttRoomId])
+                        }
+                    }}
+                    fill="rgba(0,0,0,0.9)"
+                    filter="url(#solid)"
+                    fontSize={6}
+                    textAnchor="middle"
+                    x={-1 * (label.position?.x ?? 1)}
+                    y={label.position?.y}>{label.name}</text>)
+            }
 
-    </svg>
+        </svg>
+        {
+            selectedRooms.length > 0 &&
+            <button
+                className="absolute right-40 top-20 px-4 py-2 bg-sky-800 text-white rounded-lg shadow-sm"
+                onClick={cleanSegments}>Clean {selectedRooms.length} room{selectedRooms.length > 1 && 's'}</button>
+        }
+    </div>
 }
 
 const pathToPolylinePoints = (path: Path) => path.map(({x, y}) => `${x}, ${y}`).join(" ")

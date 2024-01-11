@@ -118,6 +118,28 @@ function App() {
         })
     }, [deviceList])
 
+    const pause = useCallback(() => {
+        deviceList.forEach(async (device) => {
+            console.log(`pausing ${device.deviceId}`)
+            await mqttClient?.publishAsync(`mqtt-bridge/home/${device.homeId}/device/${device.deviceId}/action`, "pause", {qos: 0})
+        })
+    }, [deviceList])
+
+    const resume = useCallback(() => {
+        deviceList.forEach(async (device) => {
+            console.log(`resuming ${device.deviceId}`)
+            await mqttClient?.publishAsync(`mqtt-bridge/home/${device.homeId}/device/${device.deviceId}/action`, "start", {qos: 0})
+        })
+    }, [deviceList])
+
+    const cleanSegments = useCallback((segments: number[]) => {
+        const params = {action: "segments", segments}
+
+        deviceList.forEach(async (device) => {
+            console.log(`cleaning segments [${params.segments.join(", ")}] for ${device.deviceId}`)
+            await mqttClient?.publishAsync(`mqtt-bridge/home/${device.homeId}/device/${device.deviceId}/action`, JSON.stringify(params), {qos: 0})
+        })
+    }, [deviceList])
 
     return (
         <div className="min-h-full">
@@ -137,10 +159,14 @@ function App() {
                                     <a href="#" onClick={refresh}
                                        className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium"
                                     >Refresh</a>
+                                    <a href="#" onClick={() => setCleanupModalOpen(true)}
+                                       className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Routine</a>
                                     <a href="#" onClick={dock}
                                        className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Dock</a>
-                                    <a href="#" onClick={() => setCleanupModalOpen(true)}
-                                       className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Clean</a>
+                                    <a href="#" onClick={pause}
+                                       className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Pause</a>
+                                    <a href="#" onClick={resume}
+                                       className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Resume</a>
                                 </div>
                             </div>
                         </div>
@@ -169,14 +195,20 @@ function App() {
                         </div>
                     </label>
                     {!useClientMap &&
-                        <SvgMap imageUrl={mapData} robotPosition={robotPosition} chargerPosition={chargerPosition}
-                                path={path} virtualWalls={virtualWalls}/>
+                        <SvgMap imageUrl={mapData}
+                                robotPosition={robotPosition}
+                                chargerPosition={chargerPosition}
+                                path={path}
+                                virtualWalls={virtualWalls}/>
                     }
                     {useClientMap &&
-                        <SvgMapClient bitmapData={bitmapData} robotPosition={robotPosition}
+                        <SvgMapClient bitmapData={bitmapData}
+                                      robotPosition={robotPosition}
                                       chargerPosition={chargerPosition}
-                                      path={path} virtualWalls={virtualWalls}
-                                      roomList={roomList}/>
+                                      path={path}
+                                      virtualWalls={virtualWalls}
+                                      roomList={roomList}
+                                      cleanSegments={cleanSegments}/>
                     }
                 </div>
             </main>

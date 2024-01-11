@@ -32,11 +32,16 @@ class DataAccessLayer(
     fun saveRooms(
         homeDetails: UserHomeData, homeEntity: Home
     ): Iterable<Room> {
+        val roomIdToRoom = roomRepository
+            .findAllById(homeDetails.rooms.map { RoomId(homeEntity.homeId, it.id) })
+            .associateBy { it.roomId }
+
         return roomRepository.saveAll(homeDetails.rooms.map {
             Room(
                 home = homeEntity,
                 roomId = it.id,
-                name = it.name
+                name = it.name,
+                mqttRoomId = roomIdToRoom[it.id]?.mqttRoomId
             )
         })
     }
@@ -132,6 +137,6 @@ class DataAccessLayer(
     }
 
     fun getRoutine(routineId: Int) =
-        routineRepository.findById(routineId)
+        routineRepository.findByRoutineId(routineId)
 
 }

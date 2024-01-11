@@ -82,6 +82,11 @@ class BridgeService(
             dataAccessLayer.saveRoutines(schemasFromRoborock, homeEntity)
 
         bridgeMqtt.announceRoutines(schemas.map(SchemaForPublish::fromSchemaEntity))
+
+        // request mqtt room ids
+        devices.forEach {
+            roborockMqtt.publishRoomMappingRequest(it.deviceId)
+        }
     }
 
     @Scheduled(fixedDelay = 10_000)
@@ -240,12 +245,22 @@ class BridgeService(
                                         }."
                                     )
                                     roborockMqtt.publishCleanSegmentRequest(targetIdentifier, params)
+
+                                    bridgeDeviceStateManager.setDeviceState(
+                                        deviceId = incomingMessage.header.deviceId!!,
+                                        BridgeDeviceState.ACTIVE
+                                    )
                                 }
 
                                 ActionKeywordsEnum.START -> {
                                     val params = incomingMessage.body.parameters as AppStartDTO
                                     logger.info("Starting / Resuming device '$targetIdentifier'")
                                     roborockMqtt.publishStartRequest(targetIdentifier, params)
+
+                                    bridgeDeviceStateManager.setDeviceState(
+                                        deviceId = incomingMessage.header.deviceId!!,
+                                        BridgeDeviceState.ACTIVE
+                                    )
                                 }
 
                                 ActionKeywordsEnum.PAUSE -> {
@@ -292,10 +307,11 @@ class BridgeService(
                         if (actionKeyword == ActionKeywordsEnum.STATE) {
                             logger.info("Requesting device state refresh via mqtt.")
                             roborockMqtt.publishStatusRequest(targetIdentifier)
-                            roborockMqtt.publishRoomMappingRequest(targetIdentifier)
                         } else if (actionKeyword == ActionKeywordsEnum.MAP) {
                             logger.info("Requesting device map via mqtt.")
                             roborockMqtt.publishMapRequest(targetIdentifier)
+                        } else {
+                            logger.warn("Invalid payload for get request.")
                         }
                     } else if (targetType == TargetType.HOME) {
                         logger.info("Refreshing home details via rest api.")
