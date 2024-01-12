@@ -7,7 +7,7 @@ import kotlin.reflect.KProperty
 import kotlin.reflect.full.companionObject
 
 class LoggerDelegate<in R : Any> : ReadOnlyProperty<R, Logger> {
-    inline fun <T : Any> getClassForLogging(javaClass: Class<T>): Class<*> {
+    private fun <T : Any> getClassForLogging(javaClass: Class<T>): Class<*> {
         return javaClass.enclosingClass?.takeIf {
             it.kotlin.companionObject?.java == javaClass
         } ?: javaClass

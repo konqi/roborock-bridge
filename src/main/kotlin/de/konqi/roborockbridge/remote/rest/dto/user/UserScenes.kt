@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.treeToValue
 import de.konqi.roborockbridge.utility.NestedJsonDeserializer
-import de.konqi.roborockbridge.utility.objectMapper
+import de.konqi.roborockbridge.utility.ObjectMapperDelegate
 import java.io.IOException
 
 internal class UserSchemasParamDeserializer : NestedJsonDeserializer<UserSceneParam>(UserSceneParam::class.java)
@@ -79,6 +79,10 @@ class ActionItemParamDeserializer : JsonDeserializer<ActionItemParam<*>?>() {
                 throw RuntimeException("Unknown method $method")
             }
         }
+    }
+
+    companion object {
+        val objectMapper by ObjectMapperDelegate()
     }
 }
 
