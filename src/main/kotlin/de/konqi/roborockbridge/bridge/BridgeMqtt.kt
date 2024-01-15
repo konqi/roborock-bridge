@@ -1,8 +1,7 @@
 package de.konqi.roborockbridge.bridge
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.konqi.roborockbridge.persistence.entity.Home
-import de.konqi.roborockbridge.persistence.entity.Room
+import de.konqi.roborockbridge.bridge.dto.*
 import de.konqi.roborockbridge.utility.CircularConcurrentLinkedQueue
 import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.utility.camelToSnakeCase
@@ -16,17 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Profile
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import java.util.*
-import java.util.concurrent.ConcurrentLinkedQueue
-
-data class Message(
-    val topic: String,
-    val message: ByteArray,
-    val qos: Int = 0,
-    val retained: Boolean = false
-)
 
 @ConfigurationProperties(prefix = "bridge-mqtt")
 data class BridgeMqttConfig(
@@ -46,7 +35,6 @@ class BridgeMqtt(
     @Autowired private val receivedMessageParser: ReceivedMessageParser
 ) {
     val mqttClient = MqttClient(bridgeMqttConfig.url, bridgeMqttConfig.clientId, null)
-//    val outboundMessagesQueue: Queue<Message> = ConcurrentLinkedQueue()
     val inboundMessagesQueue = CircularConcurrentLinkedQueue<ReceivedMessage>(20)
 
     @PostConstruct
@@ -116,30 +104,7 @@ class BridgeMqtt(
         inboundMessagesQueue.add(msg)
     }
 
-//    @Scheduled(fixedDelay = 1000)
-//    fun queueWorker() {
-//        while (!outboundMessagesQueue.isEmpty()) {
-//            val message = outboundMessagesQueue.remove()
-//            if (mqttClient.isConnected) {
-//                mqttClient.publish(message.topic, message.message, message.qos, message.retained)
-//            } else {
-//                logger.warn("Could not publish message because mqtt client is not connected.")
-//            }
-//        }
-//    }
-
-//    fun log(message: String, homeId: Int? = null, deviceId: String? = null) {
-//        logger.info("Logging message '$message' back to broker.")
-//        val topic = if (deviceId != null && homeId != null) {
-//            getDeviceLogTopic(homeId, deviceId)
-//        } else {
-//            getBridgeLogTopic()
-//        }
-//
-//        outboundMessagesQueue.add(Message(topic, message.toByteArray(), 0, false))
-//    }
-
-    fun announceHome(home: Home) {
+    fun announceHome(home: HomeForPublish) {
         logger.info("Announcing new home with id '${home.homeId}'")
         val topic = getHomeTopic(home.homeId)
         val payload = objectMapper.writeValueAsBytes(home)
@@ -161,10 +126,9 @@ class BridgeMqtt(
         mqttClient.publish(topic, payload, 0, true)
     }
 
-    fun announceRooms(rooms: List<Room>) {
-        // TODO: Do not publish db entities!!
+    fun announceRooms(rooms: List<RoomForPublish>) {
         logger.info("Announcing ${rooms.size} rooms.")
-        val topic = ROOM_TOPIC.replace(HOME_TOPIC, getHomeTopic(rooms.first().home.homeId))
+        val topic = ROOM_TOPIC.replace(HOME_TOPIC, getHomeTopic(rooms.first().homeId))
         val payload = objectMapper.writeValueAsBytes(rooms)
         mqttClient.publish(
             topic, payload, 0, true
@@ -179,11 +143,6 @@ class BridgeMqtt(
             mqttClient.publish(topic, payload, 0, true)
         }
     }
-
-//    fun publishVolatile(homeId: Int, deviceId: String, property: String, payload: ByteArray) {
-//        val topic = getPropertyTopic(homeId, deviceId, property)
-//        mqttClient.publish(topic, payload, 0, false)
-//    }
 
     fun publishMapData(homeId: Int, deviceId: String, mapData: MapDataForPublish) {
         mapData.getFields().forEach {
@@ -214,22 +173,6 @@ class BridgeMqtt(
         DEVICE_PROPERTY_TOPIC.replace(DEVICE_TOPIC, getDeviceTopic(homeId, deviceId))
             .replace("{$PROPERTY}", property)
 
-
-//    fun getPropertyCommandTopic(homeId: Int, deviceId: String, property: String, cmd: String): String {
-//        return DEVICE_PROPERTY_COMMAND_TOPIC.replace(
-//            DEVICE_PROPERTY_TOPIC,
-//            getPropertyTopic(homeId, deviceId, property)
-//        ).replace("{$COMMAND}", cmd)
-//    }
-
-//    fun getDeviceLogTopic(homeId: Int, deviceId: String): String {
-//        return DEVICE_LOG_TOPIC.replace(DEVICE_TOPIC, getDeviceTopic(homeId, deviceId))
-//    }
-
-//    fun getBridgeLogTopic(): String {
-//        return BRIDGE_LOG_TOPIC.replace("{$BASE_TOPIC}", bridgeMqttConfig.baseTopic)
-//    }
-
     @PreDestroy
     fun disconnect() {
         if (mqttClient.isConnected) {
@@ -249,25 +192,15 @@ class BridgeMqtt(
         const val HOME_ID = "homeId"
         const val ROUTINE = "routine"
         const val ROUTINE_ID = "routineId"
-//        const val COMMAND = "command"
 
-        //        const val ROOM = "room"
-//        const val ROOM_ID = "roomId"
         private const val HOME_TOPIC_PARTIAL = "$HOME/{$HOME_ID}"
         private const val DEVICE_TOPIC_PARTIAL = "$DEVICE/{$DEVICE_ID}"
         private const val ROUTINE_TOPIC_PARTIAL = "$ROUTINE/{$ROUTINE_ID}"
 
-        //        const val ROOM_TOPIC_PARTIAL = "$ROOM/{$ROOM_ID}"
         const val HOME_TOPIC = "{$BASE_TOPIC}/$HOME_TOPIC_PARTIAL"
         const val ROOM_TOPIC = "$HOME_TOPIC/rooms"
         const val ROUTINE_TOPIC = "$HOME_TOPIC/$ROUTINE_TOPIC_PARTIAL"
         const val DEVICE_TOPIC = "$HOME_TOPIC/$DEVICE_TOPIC_PARTIAL"
         const val DEVICE_PROPERTY_TOPIC = "$DEVICE_TOPIC/{$PROPERTY}"
-
-        //        const val DEVICE_PROPERTY_COMMAND_TOPIC = "$DEVICE_PROPERTY_TOPIC/{$COMMAND}"
-
-        //        const val LOG = "log"
-//        const val DEVICE_LOG_TOPIC = "$DEVICE_TOPIC/$LOG"
-//        const val BRIDGE_LOG_TOPIC = "{$BASE_TOPIC}/$LOG"
     }
 }

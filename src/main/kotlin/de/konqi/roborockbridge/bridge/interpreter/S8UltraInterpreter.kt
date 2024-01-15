@@ -1,6 +1,8 @@
 package de.konqi.roborockbridge.bridge.interpreter
 
 import org.springframework.stereotype.Service
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 @Service
 class S8UltraInterpreter : SchemaValueInterpreter {
@@ -25,6 +27,9 @@ class S8UltraInterpreter : SchemaValueInterpreter {
             CHARGING_STATE -> if (value == 1) "charging" else "not charging"
             DRYING_STATE -> if (value == 1) "drying" else "not drying"
             MOP_MODE -> MOP_MODE_CODE_UNKNOWN[value]
+            CLEAN_TIME -> "$value s"
+            CLEAN_AREA -> "${BigDecimal(value).divide(BigDecimal(1_000_000), 2, RoundingMode.HALF_UP)} m^2"
+            DOCK_ERROR_STATUS -> ERROR_CODE_120[value]
             else -> null
         }
     }
@@ -67,6 +72,9 @@ class S8UltraInterpreter : SchemaValueInterpreter {
         const val CHARGING_STATE = "charging_state"
         const val DRYING_STATE = "drying_state"
         const val MOP_MODE = "mop_mode"
+        const val CLEAN_AREA = "clean_area"
+        const val CLEAN_TIME = "clean_time"
+        const val DOCK_ERROR_STATUS = "dock_error_status"
 
         val SCHEMA_TO_CODE_MAPPING = mapOf(
             120 to ERROR_CODE,
@@ -164,5 +172,8 @@ class S8UltraInterpreter : SchemaValueInterpreter {
             202 to "Moderate",
             203 to "Intense",
         )
+//        val CAMERA_STATE = mapOf(
+//            385 to "?"
+//        )
     }
 }

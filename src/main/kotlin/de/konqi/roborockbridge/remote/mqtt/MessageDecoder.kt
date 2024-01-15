@@ -68,7 +68,7 @@ class MessageDecoder(
             }
 
             IpcResponseWrapper.SCHEMA_TYPE -> {
-                val messages = readIpcResponse(data)
+                val messages = readIpcResponse(deviceId, data)
                 messages.map { (proto, payload) ->
                     // check if ipc response
                     if (proto == IpcResponseWrapper.SCHEMA_TYPE) {
@@ -87,7 +87,7 @@ class MessageDecoder(
             }
 
             MapDataWrapper.SCHEMA_TYPE -> {
-                val message = readProtocol301Body(data)
+                val message = readProtocol301Body(deviceId, data)
                 listOf(
                     MessageWrapper(
                         deviceId = deviceId,
@@ -110,6 +110,7 @@ class MessageDecoder(
     }
 
     fun readIpcResponse(
+        deviceId: String,
         data: EncryptedMessage
     ): Map<Int, Any> {
         val protocol102Wrapper: IpcResponseWrapper = objectMapper.readValue(data.payload)
@@ -117,7 +118,7 @@ class MessageDecoder(
         return protocol102Wrapper.dps.map { (nestedProtocolIdentifier, value) ->
             if (nestedProtocolIdentifier == "102") {
                 // this is an IPC response
-                nestedProtocolIdentifier.toInt() to readIpcResponseBody(value)
+                nestedProtocolIdentifier.toInt() to readIpcResponseBody(deviceId, value)
             } else {
                 // this is one or more status updates
                 nestedProtocolIdentifier.toInt() to value.toInt()
@@ -125,19 +126,19 @@ class MessageDecoder(
         }.toMap()
     }
 
-    private fun readIpcResponseBody(body: String?): IpcResponseDps<out Any> {
+    private fun readIpcResponseBody(deviceId: String, body: String?): IpcResponseDps<out Any> {
         return if (!body.isNullOrEmpty()) {
             // Reed as generic Json, because we need the request id to match the correct response object
             val protocol102Dps: IpcResponseDps<JsonNode> = objectMapper.readValue(body)
             // the id matches the request, the request determines the response object
-            val requestData = requestMemory.get(protocol102Dps.id)
+            val requestData = requestMemory.get(deviceId, protocol102Dps.id)
 
             if (requestData != null) {
                 // for map requests we get two responses, one with a confirmation of the request (proto 102) and map data (proto 301)
                 // TODO: Refactor request memory, since it only needs to contain the nonce for decoding captures
                 if (requestData.nonce == null) {
                     logger.info("Received response to request ${protocol102Dps.id} with method '${requestData.method}'.")
-                    requestMemory.remove(protocol102Dps.id)
+                    requestMemory.remove(deviceId, protocol102Dps.id)
                 } else {
                     logger.info("Request ${protocol102Dps.id} with method '${requestData.method}' was confirmed via IPC Response.")
                 }
@@ -158,9 +159,9 @@ class MessageDecoder(
         }
     }
 
-    fun readProtocol301Body(data: EncryptedMessage): Protocol301 {
+    fun readProtocol301Body(deviceId: String, data: EncryptedMessage): Protocol301 {
         val mqttResponse = Protocol301Binary.fromRawBytes(data.payload)
-        val requestData = requestMemory.remove(mqttResponse.id.toInt())
+        val requestData = requestMemory.remove(deviceId, mqttResponse.id.toInt())
         // get nonce for id (assuming the id in the response matches the one in the request)
         return if (requestData?.nonce != null) {
             val decrypted = mqttResponse.decryptAndDecode(requestData.nonce)

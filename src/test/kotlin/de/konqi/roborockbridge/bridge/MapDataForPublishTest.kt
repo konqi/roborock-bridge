@@ -1,14 +1,16 @@
 package de.konqi.roborockbridge.bridge
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import de.konqi.roborockbridge.bridge.dto.MapDataForPublish
 import de.konqi.roborockbridge.remote.mqtt.map.dto.Coordinate
+import de.konqi.roborockbridge.utility.DataCompressor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class MapDataForPublishTest {
     val testObj = MapDataForPublish(
-        map = "Hi",
-        bitmapData = "bitmap",
+        map = DataCompressor("Hi"),
+        bitmapData = DataCompressor("bitmap"),
         robotPosition = Coordinate(0.0f, 0.0f),
         chargerPosition = Coordinate(0.0f, 0.0f),
         path = listOf(),
@@ -33,7 +35,6 @@ class MapDataForPublishTest {
         val jsonString = objectMapper.writeValueAsString(testObj)
         assertThat(jsonString).contains("virtualWalls")
         assertThat(jsonString).contains("bitmapData")
-        println(jsonString)
     }
 
     @Test

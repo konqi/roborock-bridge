@@ -1,6 +1,6 @@
 import mqtt, {MqttClient} from "mqtt"
 import {useCallback, useEffect, useState} from "react";
-import {Device, Path, Position, Room, Routine, VirtualWalls} from "./types.ts";
+import {BinaryData, Device, ObjectPosition, Path, Room, Routine, VirtualWalls} from "./types.ts";
 import CleanupRoutinesModal from "./CleanupRoutinesModal.tsx";
 import SvgMap from "./SvgMap.tsx";
 import {
@@ -35,10 +35,10 @@ let mqttClient: MqttClient | null
 function App() {
     const [deviceList, setDeviceList] = useState<Device[]>([])
     const [routineList, setRoutineList] = useState<Routine[]>([])
-    const [mapData, setMapData] = useState(mock_map_data)
-    const [bitmapData, setBitmapData] = useState(mock_bitmap_data)
-    const [robotPosition, setRobotPosition] = useState<Position>(mock_robot_position)
-    const [chargerPosition, setChargerPosition] = useState<Position>(mock_charger_position)
+    const [mapData, setMapData] = useState<BinaryData>(mock_map_data)
+    const [bitmapData, setBitmapData] = useState<BinaryData>(mock_bitmap_data)
+    const [robotPosition, setRobotPosition] = useState<ObjectPosition>(mock_robot_position)
+    const [chargerPosition, setChargerPosition] = useState<ObjectPosition>(mock_charger_position)
     const [path, setPath] = useState<Path>(mock_path)
     const [virtualWalls, setVirtualWalls] = useState<VirtualWalls>(mock_virtual_walls)
     const [cleanupModalOpen, setCleanupModalOpen] = useState(false)
@@ -67,10 +67,10 @@ function App() {
 
                 switch (topic.split('/').at(-1)) {
                     case 'map':
-                        setMapData(message.toString())
+                        setMapData(JSON.parse(message.toString()))
                         break
                     case 'bitmap_data':
-                        setBitmapData(message.toString())
+                        setBitmapData(JSON.parse(message.toString()))
                         break
                     case 'robot_position':
                         setRobotPosition(JSON.parse(message.toString()))
@@ -118,6 +118,28 @@ function App() {
         })
     }, [deviceList])
 
+    const pause = useCallback(() => {
+        deviceList.forEach(async (device) => {
+            console.log(`pausing ${device.deviceId}`)
+            await mqttClient?.publishAsync(`mqtt-bridge/home/${device.homeId}/device/${device.deviceId}/action`, "pause", {qos: 0})
+        })
+    }, [deviceList])
+
+    const resume = useCallback(() => {
+        deviceList.forEach(async (device) => {
+            console.log(`resuming ${device.deviceId}`)
+            await mqttClient?.publishAsync(`mqtt-bridge/home/${device.homeId}/device/${device.deviceId}/action`, "start", {qos: 0})
+        })
+    }, [deviceList])
+
+    const cleanSegments = useCallback((segments: number[]) => {
+        const params = {action: "segments", segments}
+
+        deviceList.forEach(async (device) => {
+            console.log(`cleaning segments [${params.segments.join(", ")}] for ${device.deviceId}`)
+            await mqttClient?.publishAsync(`mqtt-bridge/home/${device.homeId}/device/${device.deviceId}/action`, JSON.stringify(params), {qos: 0})
+        })
+    }, [deviceList])
 
     return (
         <div className="min-h-full">
@@ -137,10 +159,14 @@ function App() {
                                     <a href="#" onClick={refresh}
                                        className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium"
                                     >Refresh</a>
+                                    <a href="#" onClick={() => setCleanupModalOpen(true)}
+                                       className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Routine</a>
                                     <a href="#" onClick={dock}
                                        className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Dock</a>
-                                    <a href="#" onClick={() => setCleanupModalOpen(true)}
-                                       className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Clean</a>
+                                    <a href="#" onClick={pause}
+                                       className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Pause</a>
+                                    <a href="#" onClick={resume}
+                                       className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium">Resume</a>
                                 </div>
                             </div>
                         </div>
@@ -169,14 +195,20 @@ function App() {
                         </div>
                     </label>
                     {!useClientMap &&
-                        <SvgMap imageUrl={mapData} robotPosition={robotPosition} chargerPosition={chargerPosition}
-                                path={path} virtualWalls={virtualWalls}/>
+                        <SvgMap imageUrl={mapData}
+                                robotPosition={robotPosition}
+                                chargerPosition={chargerPosition}
+                                path={path}
+                                virtualWalls={virtualWalls}/>
                     }
                     {useClientMap &&
-                        <SvgMapClient bitmapData={bitmapData} robotPosition={robotPosition}
+                        <SvgMapClient bitmapData={bitmapData}
+                                      robotPosition={robotPosition}
                                       chargerPosition={chargerPosition}
-                                      path={path} virtualWalls={virtualWalls}
-                                      roomList={roomList}/>
+                                      path={path}
+                                      virtualWalls={virtualWalls}
+                                      roomList={roomList}
+                                      cleanSegments={cleanSegments}/>
                     }
                 </div>
             </main>

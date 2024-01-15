@@ -1,10 +1,12 @@
 package de.konqi.roborockbridge
 
 import de.konqi.roborockbridge.bridge.*
+import de.konqi.roborockbridge.bridge.dto.*
 import de.konqi.roborockbridge.bridge.interpreter.BridgeDeviceState
 import de.konqi.roborockbridge.bridge.interpreter.InterpreterProvider
 import de.konqi.roborockbridge.persistence.DataAccessLayer
 import de.konqi.roborockbridge.remote.RoborockCredentials
+import de.konqi.roborockbridge.remote.helper.RequestMemory
 import de.konqi.roborockbridge.remote.mqtt.MessageWrapper
 import de.konqi.roborockbridge.remote.mqtt.RequestMethod
 import de.konqi.roborockbridge.remote.mqtt.RoborockMqtt
@@ -45,6 +47,7 @@ class BridgeService(
     @Autowired private val bridgeMqtt: BridgeMqtt,
     @Autowired private val dataAccessLayer: DataAccessLayer,
     @Autowired private val interpreterProvider: InterpreterProvider,
+    @Autowired private val requestMemory: RequestMemory,
     @Autowired private val bridgeDeviceStateManager: BridgeDeviceStateManager
 ) {
     private var run = true
@@ -66,23 +69,34 @@ class BridgeService(
         bridgeDeviceStateManager.updateDeviceState(devices)
 
         // announce devices on mqtt broker
-        bridgeMqtt.announceHome(homeEntity)
+        bridgeMqtt.announceHome(HomeForPublish.fromHomeEntity(homeEntity))
         devices.map(DeviceForPublish::fromDeviceEntity).forEach { device ->
             bridgeMqtt.announceDevice(device)
             publishDeviceStatus(deviceId = device.deviceId)
         }
 
-        bridgeMqtt.announceRooms(rooms.toList())
+        bridgeMqtt.announceRooms(rooms.map(RoomForPublish::fromRoomEntity))
 
         val schemasFromRoborock = userApi.getCleanupScenes(homeEntity.homeId)
         val schemas =
             dataAccessLayer.saveRoutines(schemasFromRoborock, homeEntity)
 
         bridgeMqtt.announceRoutines(schemas.map(SchemaForPublish::fromSchemaEntity))
+
+        // request mqtt room ids
+        devices.forEach {
+            roborockMqtt.publishRoomMappingRequest(it.deviceId)
+        }
     }
 
     @Scheduled(fixedDelay = 10_000)
     fun mqttStatusPoll() {
+        // Clear stale messages and set associated devices to state unreachable
+        requestMemory.clearMessagesOlderThan(5000).map { it.first }.toSet().forEach { deviceId ->
+            bridgeDeviceStateManager.setDeviceState(deviceId, BridgeDeviceState.UNREACHABLE)
+        }
+
+        // poll active devices
         bridgeDeviceStateManager.getDevicesInState(BridgeDeviceState.ACTIVE, BridgeDeviceState.ERROR_ACTIVE)
             .forEach { deviceId ->
                 roborockMqtt.publishStatusRequest(deviceId)
@@ -161,7 +175,7 @@ class BridgeService(
                                 }.also { dataAccessLayer.saveRooms(it) }
 
                             // NOTIFY
-                            bridgeMqtt.announceRooms(updatedRooms)
+                            bridgeMqtt.announceRooms(updatedRooms.map(RoomForPublish::fromRoomEntity))
                         }
                     }
                 }
@@ -231,12 +245,22 @@ class BridgeService(
                                         }."
                                     )
                                     roborockMqtt.publishCleanSegmentRequest(targetIdentifier, params)
+
+                                    bridgeDeviceStateManager.setDeviceState(
+                                        deviceId = incomingMessage.header.deviceId!!,
+                                        BridgeDeviceState.ACTIVE
+                                    )
                                 }
 
                                 ActionKeywordsEnum.START -> {
                                     val params = incomingMessage.body.parameters as AppStartDTO
                                     logger.info("Starting / Resuming device '$targetIdentifier'")
                                     roborockMqtt.publishStartRequest(targetIdentifier, params)
+
+                                    bridgeDeviceStateManager.setDeviceState(
+                                        deviceId = incomingMessage.header.deviceId!!,
+                                        BridgeDeviceState.ACTIVE
+                                    )
                                 }
 
                                 ActionKeywordsEnum.PAUSE -> {
@@ -283,10 +307,11 @@ class BridgeService(
                         if (actionKeyword == ActionKeywordsEnum.STATE) {
                             logger.info("Requesting device state refresh via mqtt.")
                             roborockMqtt.publishStatusRequest(targetIdentifier)
-                            roborockMqtt.publishRoomMappingRequest(targetIdentifier)
                         } else if (actionKeyword == ActionKeywordsEnum.MAP) {
                             logger.info("Requesting device map via mqtt.")
                             roborockMqtt.publishMapRequest(targetIdentifier)
+                        } else {
+                            logger.warn("Invalid payload for get request.")
                         }
                     } else if (targetType == TargetType.HOME) {
                         logger.info("Refreshing home details via rest api.")

@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param
 import java.util.*
 
 interface HomeRepository : CrudRepository<Home, Int>
-interface RoomRepository : CrudRepository<Room, Int> {
+interface RoomRepository : CrudRepository<Room, RoomId> {
     fun findAllByHome_HomeId(homeId: Int): List<Room>
 }
 interface DeviceRepository : CrudRepository<Device, String>
@@ -25,4 +25,6 @@ interface DeviceStateRepository : CrudRepository<DeviceState, DeviceStateId> {
 
 }
 
-interface RoutineRepository : CrudRepository<Routine, Int>
+interface RoutineRepository : CrudRepository<Routine, RoutineId> {
+    fun findByRoutineId(routineId: Int): Optional<Routine>
+}

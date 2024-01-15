@@ -161,9 +161,12 @@ However, if you have never heard of mqtt, and you have no idea what it is, you m
 |   📝   | Verify room cleaning parameters                              |
 |   ✅    | Pause & Resume (e.g. to pause when certain area is entered)  |
 |   📝   | Verify Pause & Resume                                        |
-|   📝   | Detect Device MQTT unreachable and stop polling              |
+|   ✅    | Detect Device MQTT unreachable and stop polling              |
 |   📝   | Find out how to get status of dock (probably not much to do) |
-|   📝   | Allow resetting consumables                                  |
+|   📝   | Allow resetting consumables (set on properties)              |
+|   📝   | Start / Stop drying at base                                  |
+|   📝   | trigger mop cleanup?                                         |
+|   📝   | create way to ask about possible prop values and meaning     |
 |   📝   | Selected area cleaning (via mqtt? tricky!)                   |
 
 ## Help reverse engineering the protocol

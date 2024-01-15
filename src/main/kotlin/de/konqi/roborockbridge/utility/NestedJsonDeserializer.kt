@@ -21,4 +21,8 @@ abstract class NestedJsonDeserializer<T>(private val clazz:Class<T>) : Converter
     override fun getOutputType(typeFactory: TypeFactory): JavaType {
         return typeFactory.constructSimpleType(clazz, null)
     }
+
+    companion object {
+        private val objectMapper by ObjectMapperDelegate()
+    }
 }

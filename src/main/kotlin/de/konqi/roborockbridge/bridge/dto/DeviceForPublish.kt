@@ -1,4 +1,4 @@
-package de.konqi.roborockbridge.bridge
+package de.konqi.roborockbridge.bridge.dto
 
 import de.konqi.roborockbridge.persistence.entity.Device
 

@@ -1,5 +1,10 @@
 package de.konqi.roborockbridge.remote.mqtt.map.dto
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
+
 /**
  * The value received via mqtt has to be divided by 50 to match the pixel map
  */
@@ -19,10 +24,23 @@ private fun safeCorrect(value: UInt, offsetCorrection: UInt) =
 private fun safeCorrect(value: UShort, offsetCorrection: UShort) =
     safeCorrect(value.toInt(), offsetCorrection.toInt())
 
+@JsonSerialize(using = CoordinateSerializer::class)
 open class Coordinate<T>(
     open val x: T,
     open val y: T
 )
+
+class CoordinateSerializer : StdSerializer<Coordinate<*>>(Coordinate::class.java) {
+    override fun serialize(coordinate: Coordinate<*>, generator: JsonGenerator, provider: SerializerProvider?) {
+        with(generator) {
+            writeStartArray()
+            writeRawValue(coordinate.x.toString())
+            writeRawValue(coordinate.y.toString())
+            writeEndArray()
+        }
+    }
+
+}
 
 fun Coordinate<UInt>.correct(top: UInt, left: UInt): Coordinate<Float> {
     return Coordinate(x = safeCorrect(x, left), y = safeCorrect(y, top))

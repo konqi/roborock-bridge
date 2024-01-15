@@ -1,7 +1,7 @@
-import {Path, Position, VirtualWalls} from "./types.ts";
+import {BinaryData, ObjectPosition, Path, VirtualWalls} from "./types.ts";
 import {useEffect, useState} from "react";
 
-const pathToPolylinePoints = (path: Path) => path.map(({x, y}) => `${x}, ${y}`).join(" ")
+const pathToPolylinePoints = (path: Path) => path.map(([x, y]) => `${x}, ${y}`).join(" ")
 
 const measureImageDataUrl = (imageData: string): Promise<HTMLImageElement> => new Promise(resolve => {
     const image = new Image()
@@ -13,9 +13,9 @@ const measureImageDataUrl = (imageData: string): Promise<HTMLImageElement> => ne
 })
 
 interface SvgMapProps {
-    imageUrl: string
-    robotPosition: Position
-    chargerPosition: Position
+    imageUrl: BinaryData
+    robotPosition: ObjectPosition
+    chargerPosition: ObjectPosition
     path: Path
     virtualWalls: VirtualWalls,
 }
@@ -32,7 +32,7 @@ function SvgMap({
     useEffect(() => {
             const worker = async () => {
                 if (imageUrl) {
-                    const image = await measureImageDataUrl(imageUrl)
+                    const image = await measureImageDataUrl(`data:image/png;base64,${imageUrl.data}`)
                     setDimensions({width: image.width, height: image.height})
                 }
             }
@@ -49,7 +49,7 @@ function SvgMap({
                    y="0"
                    width={dimensions.width}
                    height={dimensions.height}
-                   href={imageUrl}/>
+                   href={`data:image/png;base64,${imageUrl.data}`}/>
         <rect x={robotPosition.x - 5}
               y={robotPosition.y - 5}
               width={10}
