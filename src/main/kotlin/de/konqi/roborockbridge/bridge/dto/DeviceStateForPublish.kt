@@ -2,6 +2,7 @@ package de.konqi.roborockbridge.bridge.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 import de.konqi.roborockbridge.bridge.interpreter.SchemaValueInterpreter
 import de.konqi.roborockbridge.persistence.entity.DeviceState
 
@@ -10,6 +11,7 @@ data class DeviceStateForPublish(
     @get:JsonIgnore
     val name: String,
     val value: String?,
+    @get:JsonProperty("raw")
     val rawValue: Int,
 //    val possibleValues: Map<Int, String>
 ) {

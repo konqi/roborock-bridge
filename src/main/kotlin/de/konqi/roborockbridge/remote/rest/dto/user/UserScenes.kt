@@ -82,7 +82,7 @@ class ActionItemParamDeserializer : JsonDeserializer<ActionItemParam<*>?>() {
     }
 
     companion object {
-        val objectMapper by ObjectMapperDelegate()
+        private val objectMapper by ObjectMapperDelegate()
     }
 }
 

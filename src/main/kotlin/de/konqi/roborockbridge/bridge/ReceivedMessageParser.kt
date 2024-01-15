@@ -79,7 +79,8 @@ class ReceivedMessageParser(
                     ActionKeywordsEnum.HOME to null
                 ),
                 CommandType.GET to mapOf(
-                    ActionKeywordsEnum.STATE to null, ActionKeywordsEnum.MAP to null
+                    ActionKeywordsEnum.STATE to null,
+                    ActionKeywordsEnum.MAP to null
                 ),
             ), TargetType.DEVICE_PROPERTY to mapOf(
                 CommandType.SET to mapOf()

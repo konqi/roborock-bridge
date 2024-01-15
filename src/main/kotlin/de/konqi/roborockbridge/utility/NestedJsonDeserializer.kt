@@ -23,6 +23,6 @@ abstract class NestedJsonDeserializer<T>(private val clazz:Class<T>) : Converter
     }
 
     companion object {
-        val objectMapper by ObjectMapperDelegate()
+        private val objectMapper by ObjectMapperDelegate()
     }
 }

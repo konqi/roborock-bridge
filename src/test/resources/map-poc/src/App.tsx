@@ -1,6 +1,6 @@
 import mqtt, {MqttClient} from "mqtt"
 import {useCallback, useEffect, useState} from "react";
-import {Device, Path, Position, Room, Routine, VirtualWalls} from "./types.ts";
+import {BinaryData, Device, ObjectPosition, Path, Room, Routine, VirtualWalls} from "./types.ts";
 import CleanupRoutinesModal from "./CleanupRoutinesModal.tsx";
 import SvgMap from "./SvgMap.tsx";
 import {
@@ -35,10 +35,10 @@ let mqttClient: MqttClient | null
 function App() {
     const [deviceList, setDeviceList] = useState<Device[]>([])
     const [routineList, setRoutineList] = useState<Routine[]>([])
-    const [mapData, setMapData] = useState(mock_map_data)
-    const [bitmapData, setBitmapData] = useState(mock_bitmap_data)
-    const [robotPosition, setRobotPosition] = useState<Position>(mock_robot_position)
-    const [chargerPosition, setChargerPosition] = useState<Position>(mock_charger_position)
+    const [mapData, setMapData] = useState<BinaryData>(mock_map_data)
+    const [bitmapData, setBitmapData] = useState<BinaryData>(mock_bitmap_data)
+    const [robotPosition, setRobotPosition] = useState<ObjectPosition>(mock_robot_position)
+    const [chargerPosition, setChargerPosition] = useState<ObjectPosition>(mock_charger_position)
     const [path, setPath] = useState<Path>(mock_path)
     const [virtualWalls, setVirtualWalls] = useState<VirtualWalls>(mock_virtual_walls)
     const [cleanupModalOpen, setCleanupModalOpen] = useState(false)
@@ -67,10 +67,10 @@ function App() {
 
                 switch (topic.split('/').at(-1)) {
                     case 'map':
-                        setMapData(message.toString())
+                        setMapData(JSON.parse(message.toString()))
                         break
                     case 'bitmap_data':
-                        setBitmapData(message.toString())
+                        setBitmapData(JSON.parse(message.toString()))
                         break
                     case 'robot_position':
                         setRobotPosition(JSON.parse(message.toString()))

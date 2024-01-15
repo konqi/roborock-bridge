@@ -1,4 +1,4 @@
-import {Color, Coordinate, Path, PixelType, Position, Room, VirtualWalls} from "./types.ts"
+import {BinaryData, Color, Coordinate, ObjectPosition, Path, PixelType, Room, VirtualWalls} from "./types.ts"
 import {useCallback, useEffect, useState} from "react"
 import "./SvgMapClient.css"
 
@@ -9,7 +9,7 @@ const RR_BLUE: Color = "rgb(130, 190, 255)"
 const RR_GRAY: Color = "rgb(109, 110, 112)"
 
 async function decompressImageData(data: string) {
-    const blob = await (await fetch(data)).blob()
+    const blob = await (await fetch(`data:application/octet-stream;base64,${data}`)).blob()
     const reader = blob.stream().pipeThrough<Uint8Array>(
         new DecompressionStream('deflate')
     ).getReader()
@@ -58,26 +58,26 @@ class Bitmap {
             slice.forEach((value, x) => {
                 this.findNeighbors(x, y)
                 this.layers.add(value)
-                this.updateRoomDimensions(value, {x, y});
+                this.updateRoomDimensions(value, [x, y]);
             })
         }
     }
 
-    private updateRoomDimensions(value: number, {x, y}: Coordinate) {
+    private updateRoomDimensions(value: number, [x, y]: Coordinate) {
         if (Bitmap.isRoom(value)) {
             const roomDimensions = this.rooms[value] ?? {
-                start: {x: this.canvas.width, y: this.canvas.height},
-                end: {x: 0, y: 0}
+                start: [this.canvas.width, this.canvas.height],
+                end: [0, 0]
             }
             this.rooms[value] = {
-                start: {
-                    x: x < roomDimensions.start.x ? x : roomDimensions.start.x,
-                    y: y < roomDimensions.start.y ? y : roomDimensions.start.y
-                },
-                end: {
-                    x: x > roomDimensions.end.x ? x : roomDimensions.end.x,
-                    y: y > roomDimensions.end.y ? y : roomDimensions.end.y
-                }
+                start: [
+                    x < roomDimensions.start[0] ? x : roomDimensions.start[0],
+                    y < roomDimensions.start[1] ? y : roomDimensions.start[1]
+                ],
+                end: [
+                    x > roomDimensions.end[0] ? x : roomDimensions.end[0],
+                    y > roomDimensions.end[1] ? y : roomDimensions.end[1]
+                ]
             }
         }
     }
@@ -154,10 +154,10 @@ class Bitmap {
 
 
 interface SvgMapClientProps {
-    bitmapData: string
+    bitmapData: BinaryData
     roomList: Room[]
-    robotPosition: Position
-    chargerPosition: Position
+    robotPosition: ObjectPosition
+    chargerPosition: ObjectPosition
     path: Path
     virtualWalls: VirtualWalls
     cleanSegments: (segments: number[]) => void
@@ -183,17 +183,14 @@ function SvgMapClient({
     }, [selectedRooms, cleanSegmentsCallback]);
 
     useEffect(() => {
-        const [preamble] = bitmapData.split(',')
-        const {
-            width,
-            height
-        } = preamble.match(/bitmap\/(?<width>[0-9]*)x(?<height>[0-9]*);base64/)?.groups ?? {}
+        const width = bitmapData.meta.dimensions[0]
+        const height = bitmapData.meta.dimensions[1]
         if (width && height) {
-            const dimensions = {width: parseInt(width), height: parseInt(height)}
+            const dimensions = {width: width, height: height}
             setDimensions(dimensions)
 
             const worker = async () => {
-                const data = await decompressImageData(bitmapData)
+                const data = await decompressImageData(bitmapData.data)
                 const bitmap = new Bitmap(data, {width: dimensions.width, height: dimensions.height})
                 const palette = bitmap.getDynamicPalette(RR_BLUE, RR_ORANGE, RR_GREEN, RR_YELLOW)
                 const roomLayers = [...bitmap.layers].filter(Bitmap.isRoom)
@@ -208,10 +205,10 @@ function SvgMapClient({
                         name: roomFromMapping?.name ?? "no name",
                         roomId: roomFromMapping?.roomId ?? 0,
                         mqttRoomId: mqttRoomId,
-                        position: {
-                            x: Math.floor(dimensions.start.x + (dimensions.end.x - dimensions.start.x) / 2),
-                            y: Math.floor(dimensions.start.y + (dimensions.end.y - dimensions.start.y) / 2),
-                        }
+                        position: [
+                            Math.floor(dimensions.start[0] + (dimensions.end[0] - dimensions.start[0]) / 2),
+                            Math.floor(dimensions.start[1] + (dimensions.end[1] - dimensions.start[1]) / 2),
+                        ]
                     }
 
                     return [...acc, room]
@@ -269,25 +266,25 @@ function SvgMapClient({
                 />
             )}
             {
-                roomLabels.map(label => <text
-                    key={label.mqttRoomId}
+                roomLabels.map(({mqttRoomId, name, position: [x, y] = []}) => <text
+                    key={mqttRoomId}
                     style={{
                         transform: "scale(-1,1) translateY(3px)",
                         cursor: "pointer"
                     }}
                     onClick={() => {
-                        if (selectedRooms.includes(label.mqttRoomId)) {
-                            setSelectedRooms(selectedRooms.filter(room => room != label.mqttRoomId))
+                        if (selectedRooms.includes(mqttRoomId)) {
+                            setSelectedRooms(selectedRooms.filter(room => room != mqttRoomId))
                         } else {
-                            setSelectedRooms([...selectedRooms, label.mqttRoomId])
+                            setSelectedRooms([...selectedRooms, mqttRoomId])
                         }
                     }}
                     fill="rgba(0,0,0,0.9)"
                     filter="url(#solid)"
                     fontSize={6}
                     textAnchor="middle"
-                    x={-1 * (label.position?.x ?? 1)}
-                    y={label.position?.y}>{label.name}</text>)
+                    x={-1 * (x ?? 1)}
+                    y={y}>{name}</text>)
             }
 
         </svg>
@@ -300,6 +297,6 @@ function SvgMapClient({
     </div>
 }
 
-const pathToPolylinePoints = (path: Path) => path.map(({x, y}) => `${x}, ${y}`).join(" ")
+const pathToPolylinePoints = (path: Path) => path.map(([x, y]) => `${x}, ${y}`).join(" ")
 
 export default SvgMapClient

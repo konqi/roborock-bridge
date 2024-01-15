@@ -1,13 +1,12 @@
 package de.konqi.roborockbridge.remote.mqtt.map.dto
 
+import de.konqi.roborockbridge.utility.DataCompressor
+import de.konqi.roborockbridge.utility.Meta
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
 import java.util.*
-import java.util.zip.Deflater
 import javax.imageio.ImageIO
-import kotlin.collections.HashMap
 import kotlin.experimental.and
 import kotlin.math.max
 import kotlin.math.min
@@ -122,22 +121,30 @@ class MapDataImage(data: MapDataSection) {
         }
     }
 
-    fun getCompressedBitmapData(): String {
-        val bytes = bitmap.flatMap { it.map { it.ordinal.toByte() } }.toByteArray()
-        val output = ByteBuffer.allocate(bytes.size).also { buffer ->
-            Deflater().run {
-                setInput(bytes)
-                finish()
-                deflate(buffer)
-                end()
-            }
-        }.flip()
+    fun getCompressedBitmapData(): DataCompressor<ByteArray> {
+        return DataCompressor(
+            data = bitmap.flatMap { row -> row.map { value -> value.ordinal.toByte() } }.toByteArray(),
+            meta = Meta(
+                mimeType = "application/octet-stream",
+                dimensions = listOf(width.toInt(), height.toInt())
+            )
+        )
 
-        val compressedBytes = ByteArray(output.limit()).also {
-            output.get(it)
-        }
-
-        return "data:deflated-bitmap/${width}x${height};base64,${Base64.getEncoder().encodeToString(compressedBytes)}"
+//        val bytes = bitmap.flatMap { it.map { it.ordinal.toByte() } }.toByteArray()
+//        val output = ByteBuffer.allocate(bytes.size).also { buffer ->
+//            Deflater().run {
+//                setInput(bytes)
+//                finish()
+//                deflate(buffer)
+//                end()
+//            }
+//        }.flip()
+//
+//        val compressedBytes = ByteArray(output.limit()).also {
+//            output.get(it)
+//        }
+//
+//        return "data:deflated-bitmap/${width}x${height};base64,${Base64.getEncoder().encodeToString(compressedBytes)}"
     }
 
     /**
