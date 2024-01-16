@@ -1,6 +1,7 @@
 package de.konqi.roborockbridge.bridge
 
 import de.konqi.roborockbridge.TestBeanProvider
+import de.konqi.roborockbridge.bridge.interpreter.InterpreterProvider
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppSegmentCleanRequestDTO
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.InstanceOfAssertFactories.list
@@ -17,14 +18,17 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 
 
-@SpringBootTest(classes = [BridgeMqtt::class, ReceivedMessageParser::class, TestBeanProvider::class])
+@SpringBootTest(classes = [BridgeMqtt::class, ReceivedMessageParser::class, TestBeanProvider::class, BridgeMqttTest.Companion.Config::class])
 @ActiveProfiles("bridge")
 class BridgeMqttTest : AbstractMqttTest() {
     @Autowired
@@ -140,6 +144,12 @@ class BridgeMqttTest : AbstractMqttTest() {
         @AfterAll
         fun afterAll() {
             mqttClient.disconnect()
+        }
+
+        @TestConfiguration
+        class Config {
+            @Bean
+            fun mockInterpreterProvider(): InterpreterProvider = Mockito.mock(InterpreterProvider::class.java)
         }
     }
 }

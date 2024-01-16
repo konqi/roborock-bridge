@@ -1,5 +1,8 @@
 package de.konqi.roborockbridge.bridge.interpreter
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.JsonNodeType
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -13,36 +16,26 @@ class S8UltraInterpreter : SchemaValueInterpreter {
         get() = setOf("roborock.vacuum.a70")
 
     override fun interpret(code: String, value: Int): String? {
-        return when (code) {
-            ERROR_CODE -> ERROR_CODE_120[value]
-            STATE -> DEVICE_STATES_101[value]
-            // Battery
-            BATTERY -> "$value %"
-            FAN_POWER -> FAN_POWER_123[value]
-            WATER_BOX_MODE -> WATER_BOX_124[value]
-            MAIN_BRUSH_LIFE -> "$value %"
-            SIDE_BRUSH_LIFE -> "$value %"
-            FILTER_LIFE -> "$value %"
-            // 128 -> 🤷
-            CHARGING_STATE -> if (value == 1) "charging" else "not charging"
-            DRYING_STATE -> if (value == 1) "drying" else "not drying"
-            MOP_MODE -> MOP_MODE_CODE_UNKNOWN[value]
-            CLEAN_TIME -> "$value s"
-            CLEAN_AREA -> "${BigDecimal(value).divide(BigDecimal(1_000_000), 2, RoundingMode.HALF_UP)} m^2"
-            DOCK_ERROR_STATUS -> ERROR_CODE_120[value]
-            else -> null
+        if (ENUM_LIKE_PROPERTIES_MAP.containsKey(code)) {
+            return ENUM_LIKE_PROPERTIES_MAP[code]!![value]
+        } else {
+            return when (code) {
+                // Battery
+                BATTERY -> "$value %"
+                MAIN_BRUSH_LIFE -> "$value %"
+                SIDE_BRUSH_LIFE -> "$value %"
+                FILTER_LIFE -> "$value %"
+                // 128 -> 🤷
+                CHARGING_STATE -> if (value == 1) "charging" else "not charging"
+                DRYING_STATE -> if (value == 1) "drying" else "not drying"
+                CLEAN_TIME -> "$value s"
+                CLEAN_AREA -> "${BigDecimal(value).divide(BigDecimal(1_000_000), 2, RoundingMode.HALF_UP)} m^2"
+                else -> null
+            }
         }
     }
 
-    override fun getOptions(code: String): Map<Int, String> {
-        return when (code) {
-            ERROR_CODE -> ERROR_CODE_120
-            STATE -> DEVICE_STATES_101
-            FAN_POWER -> FAN_POWER_123
-            WATER_BOX_MODE -> WATER_BOX_124
-            else -> emptyMap()
-        }
-    }
+    override fun getOptions(code: String): Map<Int, String> = ENUM_LIKE_PROPERTIES_MAP[code] ?: emptyMap()
 
     override fun schemaIdToPropName(schemaId: Int): String? = SCHEMA_TO_CODE_MAPPING[schemaId]
 
@@ -53,6 +46,31 @@ class S8UltraInterpreter : SchemaValueInterpreter {
             BridgeDeviceState.ACTIVE
         } else {
             BridgeDeviceState.UNKNOWN
+        }
+    }
+
+    override fun preprocessMapNode(node: JsonNode): JsonNode = JsonNodeFactory.instance.objectNode().also { newNode ->
+        for (fieldName in node.fieldNames()) {
+            val currentNode = node.get(fieldName)
+            val nodeType = currentNode.nodeType
+
+            if (nodeType == JsonNodeType.STRING && ENUM_LIKE_PROPERTIES_MAP.containsKey(fieldName)) {
+                val textValue = currentNode.textValue().trim().lowercase()
+
+                val intValue = ENUM_LIKE_PROPERTIES_MAP[fieldName]!!.entries.find {
+                    it.value.lowercase() == textValue
+                }?.key
+                if (intValue != null) {
+                    newNode.put(fieldName, intValue)
+                } else {
+                    newNode.put(fieldName, currentNode.textValue())
+                }
+            } else {
+                newNode.putIfAbsent(
+                    fieldName,
+                    currentNode
+                )
+            }
         }
     }
 
@@ -175,5 +193,14 @@ class S8UltraInterpreter : SchemaValueInterpreter {
 //        val CAMERA_STATE = mapOf(
 //            385 to "?"
 //        )
+
+        val ENUM_LIKE_PROPERTIES_MAP = mapOf(
+            ERROR_CODE to ERROR_CODE_120,
+            STATE to DEVICE_STATES_101,
+            FAN_POWER to FAN_POWER_123,
+            WATER_BOX_MODE to WATER_BOX_124,
+            MOP_MODE to MOP_MODE_CODE_UNKNOWN,
+            DOCK_ERROR_STATUS to ERROR_CODE_120
+        )
     }
 }

@@ -1,6 +1,7 @@
 package de.konqi.roborockbridge.bridge
 
 import de.konqi.roborockbridge.TestBeanProvider
+import de.konqi.roborockbridge.bridge.interpreter.InterpreterProvider
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppSegmentCleanRequestDTO
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.AppStartDTO
 import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.SetCleanMotorModeDTO
@@ -185,6 +186,9 @@ class ReceivedMessageParserTest {
             fun mockMqttConfig(): BridgeMqttConfig = Mockito.mock(BridgeMqttConfig::class.java).also {
                 `when`(it.baseTopic).thenReturn("")
             }
+
+            @Bean
+            fun mockInterpreterProvider(): InterpreterProvider = Mockito.mock(InterpreterProvider::class.java)
         }
     }
 }

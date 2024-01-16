@@ -1,5 +1,6 @@
 package de.konqi.roborockbridge.bridge.interpreter
 
+import com.fasterxml.jackson.databind.JsonNode
 import org.springframework.stereotype.Service
 
 @Service
@@ -25,6 +26,8 @@ class GenericInterpreter : SchemaValueInterpreter {
             BridgeDeviceState.UNKNOWN
         }
     }
+
+    override fun preprocessMapNode(node: JsonNode): JsonNode = node // pass-through
 
     companion object {
         val IDLE_STATES = listOf(2, 3)

@@ -1,5 +1,6 @@
 package de.konqi.roborockbridge.bridge.interpreter
 
+import com.fasterxml.jackson.databind.JsonNode
 import de.konqi.roborockbridge.persistence.DataAccessLayer
 import de.konqi.roborockbridge.persistence.entity.Device
 import de.konqi.roborockbridge.persistence.entity.DeviceState
@@ -50,6 +51,11 @@ interface SchemaValueInterpreter {
      * Function to translate all-the-states into a simplified state for the bridge
      */
     fun getState(currentState: Map<String, Int>): BridgeDeviceState
+
+    /**
+     * Preprocess a map-like structure to replace string values with corresponding int values
+     */
+    fun preprocessMapNode(node: JsonNode): JsonNode
 }
 
 fun SchemaValueInterpreter.getState(deviceState: List<DeviceState>) =
@@ -62,9 +68,7 @@ class InterpreterProvider(
 ) {
     fun getInterpreterForModel(modelName: String): SchemaValueInterpreter? =
         interpreters.find { it.modelNames.contains(modelName) } ?: interpreters.find {
-            it.modelNames.contains(
-                "*"
-            )
+            it is GenericInterpreter
         }
 
     fun getInterpreterForDevice(device: Device): SchemaValueInterpreter? =
