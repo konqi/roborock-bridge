@@ -19,6 +19,11 @@ enum class CommandType(val value: String) {
     ACTION("action"),
 
     /**
+     * query about possible values of device property
+     */
+    OPTIONS("options"),
+
+    /**
      * unknown command (to be ignored)
      */
     UNKNOWN("unknown");
@@ -71,9 +76,7 @@ data class ReceivedMessageHeader(
             "(?:(?:$sectionName)/(?<$sectionName>$valuePattern))"
 
         private val commandSuffixRegex = "/(?<command>${
-            listOf(
-                CommandType.ACTION, CommandType.SET, CommandType.GET
-            ).joinToString("|") { it.value }
+            CommandType.entries.filter { it != CommandType.UNKNOWN }.joinToString("|") { it.value }
         })?"
 
         private fun combineSections(vararg sections: String) = """(?:/(?:${sections.joinToString("|")}))*"""

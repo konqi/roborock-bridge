@@ -23,8 +23,12 @@ class ReceivedMessageParser(
 
         val header = ReceivedMessageHeader.fromTopic(topicWithoutBase)
 
-        val payloadString = String(payload)
-        val action = payloadString.trim().let {
+        val payloadString = String(payload).trim()
+        // must ignore options command with non-empty payload to avoid endless loop
+        if(payloadString.isNotBlank() && header.command == CommandType.OPTIONS) {
+            return null
+        }
+        val action = payloadString.let {
             try {
                 if (it.startsWith("{") && it.endsWith("}")) {
                     objectMapper.readTree(it).get("action").textValue()
@@ -96,7 +100,8 @@ class ReceivedMessageParser(
                     ActionKeywordsEnum.MAP to null
                 ),
             ), TargetType.DEVICE_PROPERTY to mapOf(
-                CommandType.SET to mapOf()
+                CommandType.SET to mapOf(),
+                CommandType.OPTIONS to mapOf()
             ), TargetType.HOME to mapOf(
                 CommandType.GET to mapOf()
             ), TargetType.ROUTINE to mapOf(

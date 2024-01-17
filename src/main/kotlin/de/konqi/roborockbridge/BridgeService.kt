@@ -82,11 +82,6 @@ class BridgeService(
             dataAccessLayer.saveRoutines(schemasFromRoborock, homeEntity)
 
         bridgeMqtt.announceRoutines(schemas.map(SchemaForPublish::fromSchemaEntity))
-
-        // request mqtt room ids
-        devices.forEach {
-            roborockMqtt.publishRoomMappingRequest(it.deviceId)
-        }
     }
 
     @Scheduled(fixedDelay = 10_000)
@@ -115,10 +110,21 @@ class BridgeService(
     @EventListener(ApplicationReadyEvent::class)
     fun worker() {
         while (!bridgeMqtt.mqttClient.isConnected) {
+            logger.debug("Waiting for bridge mqtt client to connect")
             Thread.sleep(1000)
         }
         init()
         roborockMqtt.start()
+
+        while(!roborockMqtt.isConnected) {
+            logger.debug("Waiting for roborock mqtt client to connect")
+            Thread.sleep(1000)
+        }
+
+        // request mqtt room ids
+        bridgeDeviceStateManager.getDeviceIds().forEach { deviceId ->
+            roborockMqtt.publishRoomMappingRequest(deviceId)
+        }
 
         while (run) {
             bridgeMqttProcessingLoop()
@@ -336,6 +342,29 @@ class BridgeService(
                         }
                     } else {
                         logger.warn("Cannot set anything, but device properties at the moment.")
+                    }
+                }
+
+                CommandType.OPTIONS -> {
+                    if (targetType == TargetType.DEVICE_PROPERTY) {
+                        if (incomingMessage.header.deviceId != null) {
+                            val options = interpreterProvider.getInterpreterForDevice(incomingMessage.header.deviceId)
+                                ?.getOptions(incomingMessage.header.targetIdentifier)
+                                // reverse
+                                ?.entries
+                                ?.associate { (k, v) -> v to k }
+
+                            if (options != null) {
+                                bridgeMqtt.publishPropertyOptions(
+                                    homeId = incomingMessage.header.homeId!!,
+                                    deviceId = incomingMessage.header.deviceId,
+                                    property = incomingMessage.header.property!!,
+                                    options = options
+                                )
+                            } else {
+                                logger.info("Options for ${incomingMessage.header.targetIdentifier} are unknown.")
+                            }
+                        }
                     }
                 }
 

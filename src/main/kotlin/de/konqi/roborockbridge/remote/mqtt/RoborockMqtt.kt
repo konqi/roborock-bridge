@@ -89,12 +89,13 @@ class RoborockMqtt(
         if (mqttClient.isConnected) {
             mqttClient.unsubscribe(subscribeTopic)
             mqttClient.disconnect()
+            logger.info("disconnected")
         }
-        logger.info("disconnected")
     }
 
 
     val isAlive = AtomicBoolean(true)
+    val isConnected get() = ::mqttClient.isInitialized && mqttClient.isConnected
 
     @Scheduled(fixedDelay = 30_000)
     private fun aliveCheck() {
@@ -124,6 +125,7 @@ class RoborockMqtt(
             setCallback(object : MqttCallback {
                 override fun connectionLost(cause: Throwable?) {
                     logger.warn("Connection lost")
+                    disconnect()
                 }
 
                 override fun messageArrived(topic: String?, message: MqttMessage?) {
@@ -136,10 +138,10 @@ class RoborockMqtt(
                     logger.debug("Message delivered")
                 }
             })
+        }.also {
+            it.connect(mqttConnectOptions)
+            logger.info("connected")
         }
-
-        mqttClient.connect(mqttConnectOptions)
-        logger.info("connected")
     }
 
     private fun subscribe() {
@@ -227,12 +229,12 @@ class RoborockMqtt(
     )
 
     fun publishSetCustomMode(deviceId: String, mopMode: Int) = publishRequest(
-            deviceId = deviceId,
-            method = RequestMethod.SET_CUSTOM_MODE,
-            parameters = listOf(
-                mopMode
-            )
+        deviceId = deviceId,
+        method = RequestMethod.SET_CUSTOM_MODE,
+        parameters = listOf(
+            mopMode
         )
+    )
 
     fun publishCleanSegmentRequest(
         deviceId: String,

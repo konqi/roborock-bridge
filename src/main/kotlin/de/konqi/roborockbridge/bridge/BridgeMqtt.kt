@@ -85,11 +85,12 @@ class BridgeMqtt(
             }
 
             val topicsToSubscribe = arrayOf(
-                "${bridgeMqttConfig.baseTopic}/$HOME/+/$ROUTINE/+/action",
-                "${bridgeMqttConfig.baseTopic}/$HOME/+/$DEVICE/+/get",
-                "${bridgeMqttConfig.baseTopic}/$HOME/+/$DEVICE/+/set",
-                "${bridgeMqttConfig.baseTopic}/$HOME/+/$DEVICE/+/action",
-                "${bridgeMqttConfig.baseTopic}/$HOME/+/$DEVICE/+/+/set"
+                "${bridgeMqttConfig.baseTopic}/$HOME/+/$ROUTINE/+/${CommandType.ACTION.value}",
+                "${bridgeMqttConfig.baseTopic}/$HOME/+/$DEVICE/+/${CommandType.GET.value}",
+                "${bridgeMqttConfig.baseTopic}/$HOME/+/$DEVICE/+/${CommandType.SET.value}",
+                "${bridgeMqttConfig.baseTopic}/$HOME/+/$DEVICE/+/${CommandType.ACTION.value}",
+                "${bridgeMqttConfig.baseTopic}/$HOME/+/$DEVICE/+/+/${CommandType.SET.value}",
+                "${bridgeMqttConfig.baseTopic}/$HOME/+/$DEVICE/+/+/${CommandType.OPTIONS.value}"
             )
 
             subscribe(
@@ -159,6 +160,13 @@ class BridgeMqtt(
         }
     }
 
+    fun publishPropertyOptions(homeId: Int, deviceId: String, property: String, options: Map<String, Int>) {
+        val base = getPropertyTopic(homeId = homeId, deviceId = deviceId, property = property)
+        val topic = "$base/$PROPERTY_OPTIONS_SUFFIX"
+
+        mqttClient.publish(topic, objectMapper.writeValueAsBytes(options), 0, false)
+    }
+
     fun getHomeTopic(homeId: Int): String = HOME_TOPIC.replace("{$BASE_TOPIC}", bridgeMqttConfig.baseTopic)
         .replace("{$HOME_ID}", homeId.toString())
 
@@ -167,7 +175,6 @@ class BridgeMqtt(
 
     fun getRoutineTopic(homeId: Int, routineId: Int): String = ROUTINE_TOPIC.replace(HOME_TOPIC, getHomeTopic(homeId))
         .replace("{$ROUTINE_ID}", routineId.toString())
-
 
     fun getPropertyTopic(homeId: Int, deviceId: String, property: String): String =
         DEVICE_PROPERTY_TOPIC.replace(DEVICE_TOPIC, getDeviceTopic(homeId, deviceId))
@@ -186,6 +193,7 @@ class BridgeMqtt(
         const val BASE_TOPIC = "baseTopic"
         const val DEVICE = "device"
         const val DEVICE_PROPERTY = "property"
+        const val PROPERTY_OPTIONS_SUFFIX = "options"
         const val DEVICE_ID = "deviceId"
         const val PROPERTY = "property"
         const val HOME = "home"

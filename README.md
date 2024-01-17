@@ -64,13 +64,14 @@ java -jar file.jar
 
 What you'll get:
 
-| topic                                        | description                                                                                                         |
-|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| `home/<homeId>`                              | All devices and routines are associated to a room. This topic contains the home name and the id.                    |
-| `home/<homeId>/rooms`                        | Homes have rooms. This topic contains a list of the defined rooms.                                                  |
-| `home/<homeId>/routine/<routineId>`          | Routines are predefined cleanup tasks (i.e. first vacuum, the mop room A). Routines can be executed with `/action`. |
-| `home/<homeId>/device/<deviceId>`            | This topic contains basic information of the device and is the parent various property topics.                      |
-| `home/<homeId>/device/<deviceId>/<property>` | Topics associated with properties of the device. e.g. current state, remaining battery charge, map data, ...        |
+| topic                                                | description                                                                                                         |
+|------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| `home/<homeId>`                                      | All devices and routines are associated to a room. This topic contains the home name and the id.                    |
+| `home/<homeId>/rooms`                                | Homes have rooms. This topic contains a list of the defined rooms.                                                  |
+| `home/<homeId>/routine/<routineId>`                  | Routines are predefined cleanup tasks (i.e. first vacuum, the mop room A). Routines can be executed with `/action`. |
+| `home/<homeId>/device/<deviceId>`                    | This topic contains basic information of the device and is the parent various property topics.                      |
+| `home/<homeId>/device/<deviceId>/<property>`         | Topics associated with properties of the device. e.g. current state, remaining battery charge, map data, ...        |
+| `home/<homeId>/device/<deviceId>/<property>/options` | Send an empty body to  this topic to get a list of possible values for the property                                 |
 
 List of some of the available properties:
 
@@ -117,6 +118,15 @@ Currently available commands:
 | device  | `{"action": "clean_mode", "fan_power": int,"mop_mode": int, "water_box_mode": int}`                      | Set cleanup options. Possible property values can be found in the Interpreter for your robot e.g. [S8 Pro Ultra, MOP_MODE_UNKNOWN, FAN_POWER_123, WATER_BOX_124](./src/main/kotlin/de/konqi/roborockbridge/bridge/interpreter/S8UltraInterpreter.kt). <br/>**Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `{"action": "clean_mode", "fan_power": 103,"mop_mode": 300, "water_box_mode": 202}` |
 | device  | `start` or `{"action": "start", "clean_mop": 1}`                                                         | Start / Resume current cleanup task. <br/>**Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `start`                                                                                                                                                                                                                                                                                              |
 | device  | `pause`                                                                                                  | Pause current cleanup task. <br/>**Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `pause`                                                                                                                                                                                                                                                                                                       |
+
+#### What values are allowed for which property
+
+If you want to know which values are allowed for which property you can ask the bridge for it.
+Send a message to `home/<homeId>/device/<deviceId>/<property>/options` with an empty body (important).
+The bridge will reply on the same topic with a map of values and their meaning.
+If there is no interpreter for your device available or the interpreter has no information about possible values it won't reply.
+
+**Example:** `<base-topic>/home/12345/device/asjnkd978732/fan_power/options`
 
 ## Something is wrong
 
@@ -166,7 +176,7 @@ However, if you have never heard of mqtt, and you have no idea what it is, you m
 |   📝   | Allow resetting consumables (set on properties)              |
 |   📝   | Start / Stop drying at base                                  |
 |   📝   | trigger mop cleanup?                                         |
-|   📝   | create way to ask about possible prop values and meaning     |
+|   ✅   | create way to ask about possible prop values and meaning     |
 |   📝   | Selected area cleaning (via mqtt? tricky!)                   |
 
 ## Help reverse engineering the protocol

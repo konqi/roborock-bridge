@@ -37,4 +37,6 @@ class BridgeDeviceStateManager(
 
     fun getDevicesInState(vararg state: BridgeDeviceState) =
         deviceStates.filter { device -> state.any { it == device.value } }.keys
+
+    fun getDeviceIds() = deviceStates.keys
 }
