@@ -116,6 +116,7 @@ Currently available commands:
 | device  | `home`                                                                                                   | Send device back to base station<br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `home`                                                                                                                                                                                                                                                                                                   |
 | device  | `{"action": "segments", "clean_mop": int?, "clean_order_mode": int?, "repeat": int?, "segments": int[]}` | Clean selected segments / rooms. Possible values are the mqttRoomIds for segments and 0 or 1 for the other values (to be verified)<br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `{"action": "segments", "segments": [18,19,20]}`                                                                                                                                                       |
 | device  | `{"action": "clean_mode", "fan_power": int,"mop_mode": int, "water_box_mode": int}`                      | Set cleanup options. Possible property values can be found in the Interpreter for your robot e.g. [S8 Pro Ultra, MOP_MODE_UNKNOWN, FAN_POWER_123, WATER_BOX_124](./src/main/kotlin/de/konqi/roborockbridge/bridge/interpreter/S8UltraInterpreter.kt). <br/>**Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `{"action": "clean_mode", "fan_power": 103,"mop_mode": 300, "water_box_mode": 202}` |
+| device  | `{"action": "clean_mode", "fan_power": string,"mop_mode": string, "water_box_mode": string}`             | Set cleanup options via string values (see next section to find out allowed values). <br/>**Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `{"action": "clean_mode", "fan_power": "max","mop_mode": "deep", "water_box_mode": "off"}`                                                                                                                                                           |
 | device  | `start` or `{"action": "start", "clean_mop": 1}`                                                         | Start / Resume current cleanup task. <br/>**Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `start`                                                                                                                                                                                                                                                                                              |
 | device  | `pause`                                                                                                  | Pause current cleanup task. <br/>**Example:** `<base-topic>/home/12345/device/asjnkd978732/action` with payload `pause`                                                                                                                                                                                                                                                                                                       |
 
@@ -124,7 +125,8 @@ Currently available commands:
 If you want to know which values are allowed for which property you can ask the bridge for it.
 Send a message to `home/<homeId>/device/<deviceId>/<property>/options` with an empty body (important).
 The bridge will reply on the same topic with a map of values and their meaning.
-If there is no interpreter for your device available or the interpreter has no information about possible values it won't reply.
+If there is no interpreter for your device available or the interpreter has no information about possible values it
+won't reply.
 
 **Example:** `<base-topic>/home/12345/device/asjnkd978732/fan_power/options`
 
@@ -168,15 +170,17 @@ However, if you have never heard of mqtt, and you have no idea what it is, you m
 |   ✅    | poll frequent updates during active phase                    | 
 |   ✅️   | Room cleaning                                                |
 |   ✅    | Set Cleanup modes                                            |
-|   📝   | Verify room cleaning parameters                              |
+|   ✅    | Verify room cleaning parameters                              |
 |   ✅    | Pause & Resume (e.g. to pause when certain area is entered)  |
 |   📝   | Verify Pause & Resume                                        |
 |   ✅    | Detect Device MQTT unreachable and stop polling              |
+|   📝   | Fix POC ui after renaming room property names                |
+|   📝   | Add room cleaning parameters to POC ui                       |
 |   📝   | Find out how to get status of dock (probably not much to do) |
 |   📝   | Allow resetting consumables (set on properties)              |
 |   📝   | Start / Stop drying at base                                  |
 |   📝   | trigger mop cleanup?                                         |
-|   ✅   | create way to ask about possible prop values and meaning     |
+|   ✅    | create way to ask about possible prop values and meaning     |
 |   📝   | Selected area cleaning (via mqtt? tricky!)                   |
 
 ## Help reverse engineering the protocol
