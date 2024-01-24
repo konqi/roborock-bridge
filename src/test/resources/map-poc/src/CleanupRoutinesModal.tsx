@@ -1,20 +1,21 @@
 import Modal from "./Modal.tsx";
-import {useCallback, useState} from "react";
-import {MqttClient} from "mqtt";
+import { useCallback, useContext, useState } from 'react'
 import {Routine} from "./types.ts";
+import { MqttContext } from './MqttContext.tsx'
 
 interface CleanupRoutinesModalProps {
     isModalOpen: boolean
     closeModal: () => void
     routines: Routine[]
-    mqttClient: MqttClient
 }
 
-function CleanupRoutinesModal({isModalOpen, closeModal, routines, mqttClient}:CleanupRoutinesModalProps) {
+function CleanupRoutinesModal({isModalOpen, closeModal, routines}:CleanupRoutinesModalProps) {
     const [cleanupRoutine, setCleanupRoutine] = useState<Routine | null>(null)
 
+    const {publish} = useContext(MqttContext)
+
     const startCleanup = useCallback(async () => {
-        await mqttClient?.publishAsync(`mqtt-bridge/home/${cleanupRoutine?.homeId}/routine/${cleanupRoutine?.id}/action`, "", {qos: 0})
+        await publish(`mqtt-bridge/home/${cleanupRoutine?.homeId}/routine/${cleanupRoutine?.id}/action`, "", {qos: 0})
         closeModal()
     }, [cleanupRoutine])
 

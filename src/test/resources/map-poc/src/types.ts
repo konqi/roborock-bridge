@@ -10,13 +10,13 @@ export interface BinaryData {
 }
 
 export interface Room {
-    roomId: number
+    room_id: number
     name: string
-    mqttRoomId: number
+    mqtt_room_id: number
     position?: Coordinate
 }
 
-export type VirtualWall = [{ x: number, y: number }, { x: number, y: number }]
+export type VirtualWall = [[ x: number, y: number ], [ x: number, y: number ]]
 export type VirtualWalls = VirtualWall[]
 
 export interface Device {
@@ -37,17 +37,14 @@ export interface Routine {
 }
 
 export type Path = Array<Coordinate>
-export interface ObjectPosition {
-    x: number
-    y: number
-    a: number
-}
+export type ObjectPosition = [x: number, y: number, a?: number]
 
 type RGB = `rgb(${number}, ${number}, ${number})`;
 type RGBA = `rgba(${number}, ${number}, ${number}, ${number})`;
 
 export type Color = RGB | RGBA;
 
+export type Options = Record<string, number>
 
 export enum PixelType {
     OUTSIDE,

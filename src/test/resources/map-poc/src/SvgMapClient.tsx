@@ -200,11 +200,11 @@ function SvgMapClient({
                 setRoomLabels(Object.keys(bitmap.rooms).reduce<Room[]>((acc, curr) => {
                     const mqttRoomId = parseInt(curr)
                     const dimensions = bitmap.rooms[mqttRoomId]
-                    const roomFromMapping = roomList.find(roomFromMapping => roomFromMapping.mqttRoomId === mqttRoomId)
+                    const roomFromMapping = roomList.find(roomFromMapping => roomFromMapping.mqtt_room_id === mqttRoomId)
                     const room: Room = {
                         name: roomFromMapping?.name ?? "no name",
-                        roomId: roomFromMapping?.roomId ?? 0,
-                        mqttRoomId: mqttRoomId,
+                        room_id: roomFromMapping?.room_id ?? 0,
+                        mqtt_room_id: mqttRoomId,
                         position: [
                             Math.floor(dimensions.start[0] + (dimensions.end[0] - dimensions.start[0]) / 2),
                             Math.floor(dimensions.start[1] + (dimensions.end[1] - dimensions.start[1]) / 2),
@@ -244,39 +244,39 @@ function SvgMapClient({
                     />
                 )
             }
-            <rect x={chargerPosition.x - 5}
-                  y={chargerPosition.y - 5}
+            <rect x={chargerPosition[0] - 5}
+                  y={chargerPosition[1] - 5}
                   width={10}
                   height={10}
                   rx={2}
                   fill="red"/>
-            <circle cx={robotPosition.x}
-                    cy={robotPosition.y}
+            <circle cx={robotPosition[0]}
+                    cy={robotPosition[1]}
                     r={5}
                     fill="blue"/>
             <polyline points={pathToPolylinePoints(path)}
                       fill="none" strokeDasharray="1 1"
                       stroke="magenta" strokeWidth="1"/>
             {virtualWalls.map(([start, end], index) =>
-                <line key={index} x1={start.x}
-                      y1={start.y}
-                      x2={end.x}
-                      y2={end.y}
+                <line key={index} x1={start[0]}
+                      y1={start[1]}
+                      x2={end[0]}
+                      y2={end[1]}
                       strokeWidth={2} stroke="red" strokeDasharray="2 2"
                 />
             )}
             {
-                roomLabels.map(({mqttRoomId, name, position: [x, y] = []}) => <text
-                    key={mqttRoomId}
+                roomLabels.map(({mqtt_room_id, name, position: [x, y] = []}) => <text
+                    key={mqtt_room_id}
                     style={{
                         transform: "scale(-1,1) translateY(3px)",
                         cursor: "pointer"
                     }}
                     onClick={() => {
-                        if (selectedRooms.includes(mqttRoomId)) {
-                            setSelectedRooms(selectedRooms.filter(room => room != mqttRoomId))
+                        if (selectedRooms.includes(mqtt_room_id)) {
+                            setSelectedRooms(selectedRooms.filter(room => room != mqtt_room_id))
                         } else {
-                            setSelectedRooms([...selectedRooms, mqttRoomId])
+                            setSelectedRooms([...selectedRooms, mqtt_room_id])
                         }
                     }}
                     fill="rgba(0,0,0,0.9)"

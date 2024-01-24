@@ -50,24 +50,24 @@ function SvgMap({
                    width={dimensions.width}
                    height={dimensions.height}
                    href={`data:image/png;base64,${imageUrl.data}`}/>
-        <rect x={robotPosition.x - 5}
-              y={robotPosition.y - 5}
+        <rect x={robotPosition[0] - 5}
+              y={robotPosition[1] - 5}
               width={10}
               height={10}
               rx={2}
               fill="red"/>
-        <circle cx={chargerPosition.x}
-                cy={chargerPosition.y}
+        <circle cx={chargerPosition[0]}
+                cy={chargerPosition[1]}
                 r={5}
                 fill="blue"/>
         <polyline points={pathToPolylinePoints(path)}
                   fill="none" strokeDasharray="1 1"
                   stroke="magenta" strokeWidth="1"/>
         {virtualWalls.map(([start, end], index) =>
-            <line key={index} x1={start.x}
-                  y1={start.y}
-                  x2={end.x}
-                  y2={end.y}
+            <line key={index} x1={start[0]}
+                  y1={start[1]}
+                  x2={end[0]}
+                  y2={end[1]}
                   strokeWidth={2} stroke="red" strokeDasharray="2 2"
             />
         )}
