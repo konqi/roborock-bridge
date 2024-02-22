@@ -117,7 +117,7 @@ class Bitmap {
             const colorsUsedByNeighbors = [...this.neighbors[curr]].map(neighbor => acc[neighbor])
             const availableColors = colors.filter(color => !colorsUsedByNeighbors.includes(color))
 
-            let pickedColor = availableColors.length > 0 ?
+            const pickedColor = availableColors.length > 0 ?
                 availableColors[curr % availableColors.length] :
                 colors[curr % colors.length]
 
@@ -217,7 +217,7 @@ function SvgMapClient({
 
             worker()
         }
-    }, [bitmapData]);
+    }, [bitmapData, roomList]);
 
     return <div className="relative">
         <svg width="100%"

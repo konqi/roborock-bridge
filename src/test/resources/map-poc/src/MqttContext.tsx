@@ -122,7 +122,7 @@ export function MqttProvider({ children }: { children: ReactNode }) {
                         device,
                     ])
                 }
-                const [_, homeId] = topic.match(/home\/([^/]*)/) ?? []
+                const [, homeId] = topic.match(/home\/([^/]*)/) ?? []
                 if (homeId.trim()) {
                     updateHomeList([
                         ...homeList.filter(
@@ -143,7 +143,7 @@ export function MqttProvider({ children }: { children: ReactNode }) {
             // add new message listener
             mqttClientRef.current.on('message', callback)
         }
-    }, [subscribedListeners])
+    }, [deviceList, homeList, subscribedListeners, updateDeviceList, updateHomeList])
 
     const publish: PublishFn = useCallback(
         async (topic, message, opts) => {
@@ -156,7 +156,7 @@ export function MqttProvider({ children }: { children: ReactNode }) {
         [mqttClientRef]
     )
 
-    const value = useMemo(() => ({ publish, addListener, removeListener }), [])
+    const value = useMemo(() => ({ publish, addListener, removeListener }), [addListener, publish, removeListener])
 
     return <MqttContext.Provider value={value}>{children}</MqttContext.Provider>
 }

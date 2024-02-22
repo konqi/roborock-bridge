@@ -88,7 +88,7 @@ function App() {
                     break
             }
         })
-    }, [])
+    }, [addListener])
 
     const refresh = useCallback(async () => {
         console.log(`refreshing ${selectedDeviceId}`)

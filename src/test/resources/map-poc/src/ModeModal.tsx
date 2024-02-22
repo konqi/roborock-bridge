@@ -62,7 +62,7 @@ function ModeModal({ isModalOpen, closeModal }: ModeModalProps) {
         return () => {
             removeListener(listener)
         }
-    }, [selectedHomeId, selectedDeviceId, addListener, removeListener])
+    }, [selectedHomeId, selectedDeviceId, addListener, removeListener, publish])
 
     useEffect(() => {
         if (!selectedFanPower && Object.keys(fanPowerOptions).length > 0) {
@@ -77,7 +77,7 @@ function ModeModal({ isModalOpen, closeModal }: ModeModalProps) {
         ) {
             setSelectedWaterBoxMode(Object.values(waterBoxModeOptions)[0])
         }
-    }, [fanPowerOptions, mopModeOptions, waterBoxModeOptions])
+    }, [fanPowerOptions, mopModeOptions, selectedFanPower, selectedMopMode, selectedWaterBoxMode, waterBoxModeOptions])
 
     const setValues = useCallback(async () => {
         await publish(
@@ -90,7 +90,7 @@ function ModeModal({ isModalOpen, closeModal }: ModeModalProps) {
             })
         )
         closeModal()
-    }, [selectedFanPower, selectedMopMode, selectedWaterBoxMode])
+    }, [closeModal, publish, selectedDeviceId, selectedFanPower, selectedHomeId, selectedMopMode, selectedWaterBoxMode])
 
     return (
         <Modal

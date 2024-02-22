@@ -17,14 +17,17 @@ function CleanupRoutinesModal({isModalOpen, closeModal, routines}:CleanupRoutine
     const startCleanup = useCallback(async () => {
         await publish(`mqtt-bridge/home/${cleanupRoutine?.homeId}/routine/${cleanupRoutine?.id}/action`, "", {qos: 0})
         closeModal()
-    }, [cleanupRoutine])
+    }, [cleanupRoutine?.homeId, cleanupRoutine?.id, closeModal, publish])
 
     return <Modal open={isModalOpen} title="Start Cleanup" body={<>
         <label htmlFor="routine"
                className="block text-sm font-medium leading-6 text-gray-900">Select Routine</label>
         <div className="mt-2">
             <select id="routine" value={cleanupRoutine?.id} onChange={(e) => {
-                setCleanupRoutine(routines.find((routine) => routine.id === parseInt(e.target.value))!!)
+                const routine = routines.find((routine) => routine.id === parseInt(e.target.value))
+                if(routine) {
+                    setCleanupRoutine(routine)
+                }
             }} name="routine" autoComplete="country-name"
                     className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6">
                 {routines.map(routine => <option key={routine.id} value={routine.id}>{routine.name}</option>)}
