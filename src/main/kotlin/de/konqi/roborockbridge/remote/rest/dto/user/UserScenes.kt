@@ -25,7 +25,7 @@ data class UserScenes(
 )
 
 data class UserSceneParam(
-    val triggers: List<String>,
+    val triggers: List<JsonNode>,
     val action: UserSceneAction,
     val matchType: String
 )
