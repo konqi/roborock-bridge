@@ -36,7 +36,7 @@ dependencies {
     // also would like to use newer version, but there is no working arm docker image available
     testImplementation("org.mock-server:mockserver-client-java:5.14.0")
     testImplementation("org.testcontainers:testcontainers:1.19.3")
-    testImplementation("org.testcontainers:junit-jupiter:1.19.3")
+    testImplementation("org.testcontainers:junit-jupiter:1.19.6")
     testImplementation("org.testcontainers:mockserver:1.19.3")
     testImplementation("org.testcontainers:hivemq:1.19.3")
     testImplementation("org.awaitility:awaitility-kotlin:4.2.0")
