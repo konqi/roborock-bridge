@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "16:00"
+  - package-ecosystem: npm
+    directory: "/src/test/resources/map-poc"
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "16:00"
