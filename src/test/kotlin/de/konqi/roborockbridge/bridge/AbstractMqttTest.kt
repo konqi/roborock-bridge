@@ -9,6 +9,7 @@ abstract class AbstractMqttTest {
     companion object {
         private val HIVEMQ_IMAGE = DockerImageName
             .parse("hivemq/hivemq-ce")
+            .withTag("2024.2")
 
 
         @JvmField
@@ -17,7 +18,7 @@ abstract class AbstractMqttTest {
 
         @JvmStatic
         @BeforeAll
-        fun startMockserver(): Unit {
+        fun startMockserver() {
             mqttBroker.start()
         }
     }
