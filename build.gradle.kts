@@ -34,7 +34,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     // should use the -no-dependencies version, but logger configuration is broken in artifact
     // also would like to use newer version, but there is no working arm docker image available
-    testImplementation("org.mock-server:mockserver-client-java:5.14.0")
+    testImplementation("org.mock-server:mockserver-client-java:5.15.0")
     testImplementation("org.testcontainers:testcontainers:1.19.6")
     testImplementation("org.testcontainers:junit-jupiter:1.19.6")
     testImplementation("org.testcontainers:mockserver:1.19.6")
