@@ -37,7 +37,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers:1.19.6")
     testImplementation("org.testcontainers:junit-jupiter:1.19.8")
     testImplementation("org.testcontainers:mockserver:1.19.6")
-    testImplementation("org.testcontainers:hivemq:1.19.6")
+    testImplementation("org.testcontainers:hivemq:1.19.8")
     testImplementation("org.awaitility:awaitility-kotlin:4.2.1")
 }
 
