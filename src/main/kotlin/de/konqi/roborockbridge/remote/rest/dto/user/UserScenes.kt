@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.treeToValue
+import de.konqi.roborockbridge.remote.rest.dto.UnknownFields
+import de.konqi.roborockbridge.remote.rest.dto.UnknownFieldsImpl
 import de.konqi.roborockbridge.utility.NestedJsonDeserializer
 import de.konqi.roborockbridge.utility.ObjectMapperDelegate
 import java.io.IOException
@@ -22,18 +24,18 @@ data class UserScenes(
     val enabled: Boolean,
     val extra: String?,
     val type: String
-)
+) : UnknownFields by UnknownFieldsImpl(UserScenes::class.simpleName)
 
 data class UserSceneParam(
     val triggers: List<JsonNode>,
     val action: UserSceneAction,
     val matchType: String
-)
+) : UnknownFields by UnknownFieldsImpl(UserSceneParam::class.simpleName)
 
 data class UserSceneAction(
     val type: String,
     val items: List<UserSceneParamActionItem>
-)
+) : UnknownFields by UnknownFieldsImpl(UserSceneAction::class.simpleName)
 
 data class UserSceneParamActionItem(
     val id: Int,
@@ -42,7 +44,7 @@ data class UserSceneParamActionItem(
     val entityId: String,
     val param: ActionItemParam<Any>,
     val finishDpIds: List<Int>
-)
+) : UnknownFields by UnknownFieldsImpl(UserSceneParamActionItem::class.simpleName)
 
 
 class ActionItemParamDeserializer : JsonDeserializer<ActionItemParam<*>?>() {
@@ -92,9 +94,9 @@ data class ActionItemParam<T>(
     val id: Int,
     val method: String,
     val params: T
-)
+) : UnknownFields by UnknownFieldsImpl(ActionItemParam::class.simpleName)
 
-interface BaseCleanupParams {
+interface BaseCleanupParams : UnknownFields {
     @get:JsonProperty("fan_power")
     val fanPower: Int
 
@@ -125,12 +127,12 @@ data class ScenesAppStartParam(
     override val mopMode: Int,
     override val mopTemplateId: Int,
     override val repeat: Int
-) : BaseCleanupParams
+) : BaseCleanupParams, UnknownFields by UnknownFieldsImpl(ScenesAppStartParam::class.simpleName)
 
 data class DifferentiatingCleanupParams<T>(
     val data: List<T>,
     val source: Int
-)
+) : UnknownFields by UnknownFieldsImpl(DifferentiatingCleanupParams::class.simpleName)
 
 data class ParamsForZonedCleanup(
     val zones: List<Zone>,
@@ -142,12 +144,12 @@ data class ParamsForZonedCleanup(
     override val cleanOrderMode: Int,
     override val mapFlag: Int,
     override val tid: String
-) : ExtendedCleanupParams
+) : ExtendedCleanupParams, UnknownFields by UnknownFieldsImpl(ParamsForZonedCleanup::class.simpleName)
 
 data class Zone(
     val repeat: Int,
     val zid: Int
-)
+) : UnknownFields by UnknownFieldsImpl(Zone::class.simpleName)
 
 data class ParamsForSegmentedCleanup(
     val segs: List<Segment>,
@@ -159,8 +161,8 @@ data class ParamsForSegmentedCleanup(
     override val cleanOrderMode: Int,
     override val mapFlag: Int,
     override val tid: String
-) : ExtendedCleanupParams
+) : ExtendedCleanupParams, UnknownFields by UnknownFieldsImpl(ParamsForSegmentedCleanup::class.simpleName)
 
 data class Segment(
     val sid: Int
-)
+) : UnknownFields by UnknownFieldsImpl(Segment::class.simpleName)

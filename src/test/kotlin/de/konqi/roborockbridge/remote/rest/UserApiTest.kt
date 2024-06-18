@@ -74,6 +74,26 @@ class UserApiTest(@Autowired val userApi: UserApi) : AbstractMockserverTest() {
     }
 
     @Test
+    fun testGetCleanupSchemasWithExtraProps() {
+        val getScenesResponseTemplate =
+            UserApiTest::class.java.getResource("GetScenesResultTemplateRevo.json.hbs")
+                ?.readText()
+
+        mockserverClient.`when`(
+            request()
+                .withMethod("GET")
+                .withPath("/user/scene/home/[0-9]+")
+                .withHeader(rrAuthHeader),
+            Times.exactly(1)
+        ).respond(template(HttpTemplate.TemplateType.MUSTACHE, getScenesResponseTemplate))
+
+
+        val schemas = userApi.getCleanupScenes(HOME_ID)
+        // Minimum assumption: There is one or more scene defined
+        assertThat(schemas).size().isPositive
+    }
+
+    @Test
     fun testStartCleanup() {
         mockserverClient.`when`(
             request()

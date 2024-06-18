@@ -1,11 +1,11 @@
 package de.konqi.roborockbridge.remote.rest
 
-import de.konqi.roborockbridge.utility.LoggerDelegate
 import de.konqi.roborockbridge.remote.ProtocolUtils
 import de.konqi.roborockbridge.remote.RoborockCredentials
 import de.konqi.roborockbridge.remote.rest.dto.user.UserApiResponseDto
 import de.konqi.roborockbridge.remote.rest.dto.user.UserHomeData
 import de.konqi.roborockbridge.remote.rest.dto.user.UserScenes
+import de.konqi.roborockbridge.utility.LoggerDelegate
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.ParameterizedTypeReference
@@ -59,7 +59,7 @@ class UserApiRestTemplate(@Autowired private val credentials: RoborockCredential
             execution.execute(request, body)
         }
 
-        this.setInterceptors(listOf(authenticationHeaderInterceptor))
+        interceptors = listOf(authenticationHeaderInterceptor)
     }
 }
 
