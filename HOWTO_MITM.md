@@ -14,11 +14,23 @@ implementation that add compatibility for your device.
 
 - Install Android Studio
 - Start the Android Device Manager \
-  This is somewhat hidden on the start screen of android studio, hit the ⠇ in the top right corner and select Virtual
-  Device Manager
-- Create an android virtual device (AVD)
+  This is somewhat hidden on the start screen of android studio. Select "Virtual
+  Device Manager"
+    - on MacOS hit the ⠇ in the top right corner
+    - on Windows under "More Actions"
+- Create an android virtual device (AVD) and start it
 - Root the AVD with [rootAVD](https://gitlab.com/newbit/rootAVD) \
   This will also install Magisk, which we will use later on.
+  The commands to run are:
+  - `./rootAVD.sh ListAllAVDs` on Linux and Mac or `rootAVD.bat ListAllAVDs` on Windows
+  - If you have just the emulated device running then you can copy the first line that ends with ramdisk.img from the output and run it
+  - If rootAVD complains that ADB is missing:
+     - Go back to Android Studio and in the same place where you started the device manager, select `SDK Manager`
+     - Go to the `SDK Tools` tab and make sure you have the `Android SDK Platform-Tools` installed
+     - You should also see the `Android SDK Location` at the top of the current window, copy this location and execute the following in your terminal
+         - on Windows `set PATH=%PATH%;<the path you copied>\platform-tools`
+         - on Linux / MacOS `PATH=$PATH;<the path you copied>/platform-tools`
+     - Now in the same window re-attempt rooting the AVD
 
 ## Install the Roborock app on the virtual device
 
