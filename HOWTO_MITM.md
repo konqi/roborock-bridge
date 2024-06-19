@@ -18,7 +18,7 @@ implementation that add compatibility for your device.
   Device Manager"
     - on MacOS hit the ⠇ in the top right corner
     - on Windows under "More Actions"
-- Create an android virtual device (AVD) and start it
+- Create an android virtual device (AVD) and start it (best to use a system image that has "Google Play" enabled, see target column)
 - Root the AVD with [rootAVD](https://gitlab.com/newbit/rootAVD) \
   This will also install Magisk, which we will use later on.
   The commands to run are:
