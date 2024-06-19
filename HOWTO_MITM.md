@@ -103,6 +103,7 @@ If it seems you can't get the certificate installed:
    - Download the certificate next to the android icon
    - Open Adroid Settings and search for `certificate`, and select `CA certificate` and select `CA certificate` as the certificate to install.
    - Proceed and select the downloaded certificate
+ - Sometimes you have to disconnect the wireguard client, stop `mitmdump` and restart it wiht `mitmdump --mode wireguard`
 
 ## The actual sniffing
 
