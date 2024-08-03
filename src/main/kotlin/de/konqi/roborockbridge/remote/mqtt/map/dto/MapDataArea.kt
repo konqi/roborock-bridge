@@ -39,7 +39,7 @@ data class MapDataArea<T>(val numberOfAreas: UShort, val areas: List<MapDataArea
         fun fromMapDataSection(data: MapDataSection): MapDataArea<UShort> {
             val numberOfAreas = data.header.getShort(8).toUShort()
             val areas = List(numberOfAreas.toInt()) { index ->
-                MapDataAreaVertices.fromRaw(data.body.slice(index * 8, 8).order(ByteOrder.LITTLE_ENDIAN))
+                MapDataAreaVertices.fromRaw(data.body.slice(index * 16, 16).order(ByteOrder.LITTLE_ENDIAN))
             }
 
             return MapDataArea(numberOfAreas = numberOfAreas, areas = areas)
