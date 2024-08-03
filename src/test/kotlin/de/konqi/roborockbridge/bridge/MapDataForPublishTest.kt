@@ -19,7 +19,9 @@ class MapDataForPublishTest {
         virtualWalls = listOf(
             listOf(Coordinate(1.2f, 2.3f), Coordinate(3.4f, 4.5f)),
             listOf(Coordinate(6.7f, 7.8f), Coordinate(8.9f, 9.0f))
-        )
+        ),
+        noGoAreas = listOf(),
+        noMoppingArea = listOf()
     )
 
     @Test
