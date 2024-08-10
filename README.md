@@ -107,6 +107,7 @@ Currently available commands:
 | home   | empty   | update home and devices via rest (some device states not included) <br/> **Example:** `<base-topic>/home/12345/get`          |
 | device | `state` | request update of all states via mqtt <br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/get` with body `state` |
 | device | `map`   | request update of map data via mqtt <br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/get` with body `map`     |
+| device | `consumables`   | request update of consumables data via mqtt <br/> **Example:** `<base-topic>/home/12345/device/asjnkd978732/get` with body `consumables`     |
 
 #### What can you do with actions?
 
