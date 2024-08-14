@@ -19,6 +19,7 @@ import de.konqi.roborockbridge.remote.mqtt.ipc.request.payload.StringDTO
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseDps
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.IpcResponseWrapper
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.payload.GetPropGetStatusResponse
+import de.konqi.roborockbridge.remote.mqtt.ipc.response.payload.GetConsumableResponse
 import de.konqi.roborockbridge.remote.mqtt.ipc.response.payload.RoomMapping
 import de.konqi.roborockbridge.remote.mqtt.map.MapDataWrapper
 import de.konqi.roborockbridge.remote.mqtt.map.Protocol301
@@ -96,6 +97,7 @@ class BridgeService(
             .forEach { deviceId ->
                 roborockMqtt.publishStatusRequest(deviceId)
                 roborockMqtt.publishMapRequest(deviceId)
+                roborockMqtt.publishConsumablesRequest(deviceId)
             }
     }
 
@@ -164,6 +166,14 @@ class BridgeService(
                         if (payload.method == RequestMethod.GET_PROP) {
                             val notifyAboutChangesAfter = Date()
                             val result = cast<Array<GetPropGetStatusResponse>>(payload.result).first()
+                            dataAccessLayer.updateDeviceStates(message.deviceId, result.states)
+                            bridgeDeviceStateManager.updateDeviceState(message.deviceId, result.states)
+
+                            // notify
+                            publishDeviceStatus(message.deviceId, notifyAboutChangesAfter)
+                        } else if (payload.method == RequestMethod.GET_CONSUMABLE) {
+                            val notifyAboutChangesAfter = Date()
+                            val result = cast<Array<GetConsumableResponse>>(payload.result).first()
                             dataAccessLayer.updateDeviceStates(message.deviceId, result.states)
                             bridgeDeviceStateManager.updateDeviceState(message.deviceId, result.states)
 
@@ -313,6 +323,9 @@ class BridgeService(
                         if (actionKeyword == ActionKeywordsEnum.STATE) {
                             logger.info("Requesting device state refresh via mqtt.")
                             roborockMqtt.publishStatusRequest(targetIdentifier)
+                        } else if (actionKeyword == ActionKeywordsEnum.CONSUMABLES) {
+                            logger.info("Requesting device consumables refresh via mqtt.")
+                            roborockMqtt.publishConsumablesRequest(targetIdentifier)
                         } else if (actionKeyword == ActionKeywordsEnum.MAP) {
                             logger.info("Requesting device map via mqtt.")
                             roborockMqtt.publishMapRequest(targetIdentifier)

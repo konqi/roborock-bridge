@@ -200,6 +200,9 @@ class RoborockMqtt(
         )
     }
 
+    fun publishConsumablesRequest(deviceId: String) =
+        publishRequest<Unit>(deviceId = deviceId, method = RequestMethod.GET_CONSUMABLE, secure = true)
+
     fun publishStatusRequest(deviceId: String) =
         publishRequest(deviceId = deviceId, method = RequestMethod.GET_PROP, parameters = listOf("get_status"))
 

@@ -42,6 +42,7 @@ enum class ActionKeywordsEnum(val value: String) {
     START("start"),
     PAUSE("pause"),
     STATE("state"),
+    CONSUMABLES("consumables"),
     UNKNOWN("unknown");
 
     companion object {
