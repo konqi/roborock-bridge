@@ -20,8 +20,14 @@ class MapDataForPublishTest {
             listOf(Coordinate(1.2f, 2.3f), Coordinate(3.4f, 4.5f)),
             listOf(Coordinate(6.7f, 7.8f), Coordinate(8.9f, 9.0f))
         ),
-        noGoAreas = listOf(),
-        noMoppingArea = listOf()
+        noGoAreas = listOf(
+            listOf(Coordinate(323.72f, 249.24f), Coordinate(323.72f, 270.24f),Coordinate(383.88f, 270.24f), Coordinate(383.88f, 249.24f)),
+            listOf(Coordinate(3315.64f, 238.8f), Coordinate(315.64f, 256.86f),Coordinate(352.22f, 256.86f), Coordinate(352.22f, 238.8f))
+        ),
+        noMoppingArea = listOf(
+            listOf(Coordinate(323.72f, 249.24f), Coordinate(323.72f, 270.24f),Coordinate(383.88f, 270.24f), Coordinate(383.88f, 249.24f)),
+            listOf(Coordinate(3315.64f, 238.8f), Coordinate(315.64f, 256.86f),Coordinate(352.22f, 256.86f), Coordinate(352.22f, 238.8f))
+        )
     )
 
     @Test
@@ -50,7 +56,9 @@ class MapDataForPublishTest {
                 "path",
                 "predictedPath",
                 "gotoPath",
-                "virtualWalls"
+                "virtualWalls",
+                "noGoAreas",
+                "noMoppingArea"
             )
         )
     }
