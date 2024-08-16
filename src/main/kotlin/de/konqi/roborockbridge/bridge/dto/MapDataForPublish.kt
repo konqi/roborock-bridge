@@ -16,7 +16,9 @@ data class MapDataForPublish(
     val path: List<Coordinate<Float>>?,
     val gotoPath: List<Coordinate<Float>>?,
     val predictedPath: List<Coordinate<Float>>?,
-    val virtualWalls: List<List<Coordinate<Float>>>
+    val virtualWalls: List<List<Coordinate<Float>>>,
+    val noGoAreas: List<List<Coordinate<Float>>>,
+    val noMoppingArea: List<List<Coordinate<Float>>>
 ) {
     operator fun get(name: String): Any? {
         return fieldNames[name]?.invoke(this)
@@ -41,7 +43,9 @@ data class MapDataForPublish(
             gotoPath = payload.gotoPath?.points,
             path = payload.path?.points,
             predictedPath = payload.predictedPath?.points,
-            virtualWalls = payload.virtualWalls?.zones?.map { listOf(it.start, it.end) } ?: listOf()
+            virtualWalls = payload.virtualWalls?.zones?.map { listOf(it.start, it.end) } ?: listOf(),
+            noGoAreas = payload.noGoAreas?.areas?.map { listOf(it.first, it.second, it.third, it.forth) } ?: listOf(),
+            noMoppingArea = payload.noGoAreas?.areas?.map { listOf(it.first, it.second, it.third, it.forth) } ?: listOf()
         )
     }
 }
