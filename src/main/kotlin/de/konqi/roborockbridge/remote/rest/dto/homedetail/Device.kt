@@ -30,7 +30,7 @@ data class Device(
     val sn: String,
     val featureSet: String,
     val newFeatureSet: String,
-    val deviceStatus: Map<Int, Int>,
+    val deviceStatus: Map<String, Int>,
     val silentOtaSwitch: Boolean,
     val f: Boolean,
 )

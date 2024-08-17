@@ -33,7 +33,7 @@ data class DeviceState(
     @Column(name = "current_value")
     val value: Int,
     @Column(name = "schema_id")
-    val schemaId: Int? = null,
+    val schemaId: String? = null,
     @Enumerated(EnumType.STRING)
     val mode: ProtocolMode? = null,
     val type: String? = null,

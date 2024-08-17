@@ -85,12 +85,12 @@ class DataAccessLayer(
             }.map {
                 DeviceState(
                     device = newDevice,
-                    schemaId = it.id.toInt(),
+                    schemaId = it.id,
                     code = it.code,
                     mode = ProtocolMode.valueOf(it.mode.uppercase()),
                     type = it.type,
                     property = it.property,
-                    value = device.deviceStatus[it.id.toInt()] ?: -1
+                    value = device.deviceStatus[it.id] ?: -1
                 )
             })
 
