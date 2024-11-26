@@ -12,5 +12,4 @@ updates:
       interval: weekly
       day: wednesday
       time: "16:00"
-      # Disable version updates for npm dependencies
       open-pull-requests-limit: 0
