@@ -1,6 +1,6 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: New Issue
+about: For all kinds of issues
 title: ''
 labels: ''
 assignees: ''
