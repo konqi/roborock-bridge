@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "de.konqi.roborock-bridge"
-version = "0.0.8-SNAPSHOT"
+version = "0.0.9-SNAPSHOT"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
