@@ -128,20 +128,28 @@ class BridgeMqtt(
     }
 
     fun announceRooms(rooms: List<RoomForPublish>) {
-        logger.info("Announcing ${rooms.size} rooms.")
-        val topic = ROOM_TOPIC.replace(HOME_TOPIC, getHomeTopic(rooms.first().homeId))
-        val payload = objectMapper.writeValueAsBytes(rooms)
-        mqttClient.publish(
-            topic, payload, 0, true
-        )
+        if(rooms.isNotEmpty()) {
+            logger.info("Announcing ${rooms.size} rooms.")
+            val topic = ROOM_TOPIC.replace(HOME_TOPIC, getHomeTopic(rooms.first().homeId))
+            val payload = objectMapper.writeValueAsBytes(rooms)
+            mqttClient.publish(
+                topic, payload, 0, true
+            )
+        } else {
+            logger.info("No rooms to announce.")
+        }
     }
 
     fun announceRoutines(schemas: List<SchemaForPublish>) {
-        logger.info("Announcing ${schemas.size} schemas.")
-        schemas.forEach {
-            val topic = getRoutineTopic(schemas.first().homeId, it.id)
-            val payload = objectMapper.writeValueAsBytes(it)
-            mqttClient.publish(topic, payload, 0, true)
+        if(schemas.isNotEmpty()) {
+            logger.info("Announcing ${schemas.size} schemas.")
+            schemas.forEach {
+                val topic = getRoutineTopic(schemas.first().homeId, it.id)
+                val payload = objectMapper.writeValueAsBytes(it)
+                mqttClient.publish(topic, payload, 0, true)
+            }
+        } else {
+            logger.info("No schemas to announce.")
         }
     }
 
