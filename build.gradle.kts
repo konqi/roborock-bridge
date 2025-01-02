@@ -38,7 +38,7 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter:1.20.4")
     testImplementation("org.testcontainers:mockserver:1.20.4")
     testImplementation("org.testcontainers:hivemq:1.20.4")
-    testImplementation("org.awaitility:awaitility-kotlin:4.2.1")
+    testImplementation("org.awaitility:awaitility-kotlin:4.2.2")
 }
 
 tasks.withType<KotlinCompile> {
