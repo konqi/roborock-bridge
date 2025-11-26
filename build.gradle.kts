@@ -5,7 +5,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.6"
     kotlin("jvm") version "2.1.20"
     kotlin("plugin.spring") version "2.1.0"
-    kotlin("plugin.jpa") version "2.1.20"
+    kotlin("plugin.jpa") version "2.2.21"
 }
 
 group = "de.konqi.roborock-bridge"
